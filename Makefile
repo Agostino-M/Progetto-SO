@@ -1,17 +1,27 @@
 # Flags per la compilazione
 CFLAGS = -sdt=c89 -pedantic
 
+# elenco degli object file necessari
+OBJS = utility.o sem_lib.o	# potrebbero mancare moduli oggetto (da controllare)
 
+# target di compilazione finale
+TARGET = master	# potrebbero mancare eseguibili (da controllare)
 
-# con "make clean" si eliminano i profotti della compilazione
-# e si ripristina il conenuto originale
-clean:
-	rm -f *.o  *~	# aggiungere eseguibili prodotti
-# *~ elimina tutti i file di tipo ~ (backup files)
+$(TARGET): $(OBJS)
+	gcc $(OBJS) -o $(TARGET)
 
-all: #file1 #file2 #ecc.
+all: $(TARGET)
 
-# exec: file.c header.h Makefile
-#		gcc $(CFLAGS) file.c -o exec
+clean:				# lascia soltanto i file sorgente
+	rm -f *.o $(TARGET) *~
 
+run: $(TARGET)	# target per eseguire. Necessita dell'eseguibile
+	./$(TARGET)
+
+# compilazione delle librerie
+sem_lib.o:
+	gcc -c sem_lib.c
+
+utility.o:
+	gcc -c utility.c
 

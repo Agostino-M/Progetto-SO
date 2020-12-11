@@ -1,11 +1,9 @@
-#ifndef sem_lib
-#define sem_lib
+#ifndef SEM_LIB_H
+#define SEM_LIB_H
 #define _GNU_SOURCE
-#include <sys/types.h>
+
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 union semun
@@ -70,4 +68,4 @@ void wait_sem_zero(int sem_id, int index);
 */
 void reset_sem_set(int sem_id, int dim);
 
-#endif /* sem_lib.h */
+#endif /* SEM_LIB_H */

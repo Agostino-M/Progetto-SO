@@ -31,7 +31,7 @@ unsigned int SO_DURATION;
 int main(int argc, char const *argv[])
 {
     #if  defined(DENSE) || defined(LARGE)
-    //Prendo i valori dalle variabili globali
+    //Prendo i valori dalle variabili d'ambiente
     SO_HOLES = atoi(getenv("SO_HOLES"));
     SO_TOP_CELLS = atoi(getenv("SO_TOP_CELLS"));
     SO_SOURCES = atoi(getenv("SO_SOURCES"));

@@ -9,7 +9,8 @@
 #include <sys/msg.h>
 #include <sys/sem.h>
 #include <signal.h>
-
+#define SO_WIDTH 20
+#define SO_HEIGHT 10
 #define TEST_ERROR                                 \
     if (errno)                                     \
     {                                              \
@@ -37,10 +38,22 @@ struct msg_request
     coordinate end;
 };
 
-struct cell
+struct Node
+{
+    int data;
+    struct Node *next;
+};
+
+typedef struct
 {
     int crossing_time;
     int nmax_taxi;
+    struct Node actual_pids;
+} cell;
+
+struct shared_map
+{
+    cell matrix[SO_WIDTH][SO_HEIGHT];
 };
 
 #endif /* UTILITY_H */

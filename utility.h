@@ -22,7 +22,13 @@
                 strerror(errno));                  \
     }
 
-#define REQUEST_LENGTH (sizeof(void) + sizeof(void))
+#define REQUEST_LENGTH (sizeof(coordinate) + sizeof(coordinate))
+typedef struct
+{
+    int row;
+    int column;
+} coordinate;
+
 struct msg_request
 {
     long mtype;
@@ -30,12 +36,6 @@ struct msg_request
     coordinate start;
     coordinate end;
 };
-
-typedef struct
-{
-    int row;
-    int column;
-} coordinate;
 
 struct cell
 {

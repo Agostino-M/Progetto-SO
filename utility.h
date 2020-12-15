@@ -4,11 +4,12 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/sem.h>
-#include <signal.h>
+#include <sys/shm.h>
 
 #define SO_WIDTH 20
 #define SO_HEIGHT 10

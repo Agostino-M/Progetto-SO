@@ -55,6 +55,11 @@ typedef struct
     int is_hole;
 } cell;
 
+/* Potrebbe non servire
+ * #define INDEX(x,y) (y * SO_WIDTH) + x
+ */
+
+#define SHARED_MAP_LENGTH (sizeof(struct shared_map))
 struct shared_map
 {
     cell matrix[SO_WIDTH][SO_HEIGHT];

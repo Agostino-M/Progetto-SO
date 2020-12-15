@@ -10,7 +10,8 @@
 #include <sys/msg.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
-
+#include <string.h>
+#include <time.h>
 #define SO_WIDTH 20
 #define SO_HEIGHT 10
 
@@ -27,6 +28,7 @@
     }
 
 #define REQUEST_LENGTH (sizeof(coordinate) + sizeof(coordinate))
+
 typedef struct
 {
     int row;
@@ -41,29 +43,8 @@ struct msg_request
     coordinate end;
 };
 
-struct Node
-{
-    int data;
-    struct Node *next;
-};
-
-typedef struct
-{
-    int crossing_time;
-    int nmax_taxi;
-    struct Node actual_pids;
-    int is_hole;
-} cell;
-
 /* Potrebbe non servire
  * #define INDEX(x,y) (y * SO_WIDTH) + x
  */
-
-#define SHARED_MAP_LENGTH (sizeof(struct shared_map))
-struct shared_map
-{
-    cell matrix[SO_WIDTH][SO_HEIGHT];
-    cell taxi[SO_WIDTH][SO_HEIGHT];
-};
 
 #endif /* UTILITY_H */

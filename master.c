@@ -17,12 +17,13 @@
 
 /* prototipi di funzioni */
 void creaMatrice();
+void fill_resource();
 
 /* variabili globali */
-unsigned int SO_HOLES = 10;
+unsigned int SO_HOLES = 2;
 unsigned int SO_SOURCES = 190;
 unsigned int SO_CAP_MIN = 1;
-unsigned int SO_CAP_MAX = 1;
+unsigned int SO_CAP_MAX = 10;
 unsigned int SO_TAXI = 95;
 /* unsigned int SO_TOP_CELLS; */
 unsigned long int SO_TIMENSEC_MIN = 100000000;
@@ -30,46 +31,22 @@ unsigned long int SO_TIMENSEC_MAX = 300000000;
 unsigned int SO_TIMEOUT = 1;
 unsigned int SO_DURATION = 20;
 
-typedef struct
-{
-    int crossing_time;
-    int nmax_taxi;
-    /*pid_t actual_pids[SO_CAP_MAX];*/
-    int is_hole;
-    int crossing_cont;
-} cell;
-
-struct shared_map
-{
-    cell matrix[SO_HEIGHT][SO_WIDTH];
-};
-
-#define SHARED_MAP_LENGTH (sizeof(struct shared_map))
+/* ID dell'IPC del semaforo e` globale */
+int id_sem_cap, id_sem_taxi;
 
 struct shared_map *city;
 
 int main(int argc, char const *argv[])
 {
-    /*printf("\nSO_HOLES: %d", SO_HOLES);
-    printf("\nSO_TOP_CELLS: %d", SO_TOP_CELLS);
-    printf("\nSO_SOURCES: %d", SO_SOURCES);
-    printf("\nSO_CAP_MIN: %d", SO_CAP_MIN);
-    printf("\nSO_CAP_MAX: %d", SO_CAP_MAX);
-    printf("\nSO_TAXI: %d", SO_TAXI);
-    printf("\nSO_TIMENSEC_MIN: %lu", SO_TIMENSEC_MIN);
-    printf("\nSO_TIMENSEC_MAX: %lu", SO_TIMENSEC_MAX);
-    printf("\nSO_TIMEOUT: %d", SO_TIMEOUT);
-    printf("\nSO_DURATION: %d\n", SO_DURATION);
-    */
-
     /* dichiarazione variabili */
     int id_shd_mem;
 
-    /* creazione signal header */
+    /* creazione signal header
     struct sigaction sa;
     bzero(&sa, sizeof(struct sigaction));
     sa.sa_handler = signal_handler;
     sigaction(SIGALRM, &sa, NULL);
+    */
 
     /* creazione memoria condivisa */
     id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0666);
@@ -79,8 +56,14 @@ int main(int argc, char const *argv[])
     city = shmat(id_shd_mem, NULL, 0);
     TEST_ERROR;
 
+    /* creazione array semafori capienza */
+    id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
+    TEST_ERROR
+
     /* creazione matrice */
     creaMatrice();
+    fill_resource();
+    print_resource(id_sem_cap);
 
     /* creazione richieste */
 
@@ -94,7 +77,11 @@ int main(int argc, char const *argv[])
     /* detaching ed eliminazione memoria condivisa */
     shmdt(city);
     shmctl(id_shd_mem, IPC_RMID, 0);
-    TEST_ERROR;
+    TEST_ERROR
+
+    /* Eliminazione semafori */
+    semctl(id_sem_cap, IPC_RMID, 0);
+    semctl(id_sem_taxi, IPC_RMID, 0);
 
     return 0;
 }
@@ -162,17 +149,21 @@ void creaMatrice()
         }
     }
 
-    /* stampa matrice */
-    printf("\n");
-    for (i = 0; i < SO_HEIGHT; i++)
+    stampa_matrice(city, 3);
+}
+
+void fill_resource()
+{
+    struct sembuf sops[NUM_RISORSE];
+    int i, j, random;
+    srand(time(NULL));
+
+    for (i = 0; i < NUM_RISORSE; i++)
     {
-        for (j = 0; j < SO_WIDTH; j++)
-        {
-            printf("%d ", city->matrix[i][j].is_hole);
-            if (j == SO_WIDTH - 1)
-            {
-                printf("\n");
-            }
-        }
+        random = (rand() % SO_CAP_MAX) + SO_CAP_MIN;
+        sops[i].sem_num = i;
+        sops[i].sem_op = random;
     }
+    semop(id_sem_cap, sops, NUM_RISORSE);
+    TEST_ERROR
 }

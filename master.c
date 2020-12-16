@@ -1,6 +1,6 @@
 #include "sem_lib.h"
 #include "utility.h"
-
+#include "handling.h"
 
 /* parametri definiti a tempo di compilazione
 #ifdef DENSE
@@ -41,7 +41,6 @@ typedef struct
 struct shared_map
 {
     cell matrix[SO_HEIGHT][SO_WIDTH];
-    cell taxi[SO_HEIGHT][SO_WIDTH];
 };
 
 #define SHARED_MAP_LENGTH (sizeof(struct shared_map))
@@ -65,6 +64,12 @@ int main(int argc, char const *argv[])
     /* dichiarazione variabili */
     int id_shd_mem;
 
+    /* creazione signal header */
+    struct sigaction sa;
+    bzero(&sa, sizeof(struct sigaction));
+    sa.sa_handler = signal_handler;
+    sigaction(SIGALRM, &sa, NULL);
+
     /* creazione memoria condivisa */
     id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0666);
     TEST_ERROR;
@@ -73,8 +78,17 @@ int main(int argc, char const *argv[])
     city = shmat(id_shd_mem, NULL, 0);
     TEST_ERROR;
 
-    /* Creazione matrice */
+    /* creazione matrice */
     creaMatrice();
+
+    /* creazione richieste */
+
+    /* creazione taxi */
+
+    /* semaforo wait for zero */
+
+    /* parte il timer SO_DURATION */
+    alarm(SO_DURATION);
 
     /* detaching ed eliminazione memoria condivisa */
     shmdt(city);
@@ -89,13 +103,13 @@ void creaMatrice()
     int i, j, i_holes, j_holes;
     unsigned long int random;
 
-    srand(getgid());
+    srand(getpid());
 
     for (i = 0; i < SO_HEIGHT; i++)
     {
         for (j = 0; j < SO_WIDTH; j++)
         {
-            random = rand() % SO_TIMENSEC_MAX + SO_TIMENSEC_MIN; 
+            random = rand() % SO_TIMENSEC_MAX + SO_TIMENSEC_MIN;
             city->matrix[i][j].crossing_time = random;
             city->matrix[i][j].is_hole = 0;
         }
@@ -106,7 +120,7 @@ void creaMatrice()
     {
         for (j = 0; j < SO_WIDTH; j++)
         {
-            printf("%d ", city -> matrix[i][j].is_hole);
+            printf("%d ", city->matrix[i][j].is_hole);
             if (j == SO_WIDTH - 1)
             {
                 printf("\n");

@@ -36,6 +36,7 @@ typedef struct
     int nmax_taxi;
     /*pid_t actual_pids[SO_CAP_MAX];*/
     int is_hole;
+    int crossing_cont;
 } cell;
 
 struct shared_map
@@ -100,7 +101,7 @@ int main(int argc, char const *argv[])
 
 void creaMatrice()
 {
-    int i, j, i_holes, j_holes;
+    int i, j, z, i_holes, j_holes, hole_inseriti = 0, cond = 1;
     unsigned long int random;
 
     srand(getpid());
@@ -112,10 +113,57 @@ void creaMatrice()
             random = rand() % SO_TIMENSEC_MAX + SO_TIMENSEC_MIN;
             city->matrix[i][j].crossing_time = random;
             city->matrix[i][j].is_hole = 0;
+            city->matrix[i][j].crossing_cont = 0;
         }
     }
 
-    /* stampa */
+    srand(time(NULL));
+
+    for (z = 0; z < SO_HOLES; z++)
+    {
+        cond = 1;
+        i_holes = rand() % SO_HEIGHT;
+        j_holes = rand() % SO_WIDTH;
+
+        if (i_holes == 0) /* caso particolare */
+            i = i_holes;
+        else
+            i = i_holes - 1;
+
+        for (i; i <= i_holes + 1 && cond == 1; i++)
+        {
+            if (j_holes == 0) /* caso particolare */
+                j = j_holes;
+            else
+                j = j_holes - 1;
+
+            for (j; j <= j_holes + 1; j++)
+            {
+                if (city->matrix[i][j].is_hole == 1)
+                {
+                    cond = 0;
+                }
+            }
+        }
+
+        i = 0;
+        j = 0;
+
+        if (cond == 1)
+        {
+            city->matrix[i_holes][j_holes].is_hole = 1;
+            hole_inseriti++;
+        }
+
+        else
+        {
+            z--;
+            continue;
+        }
+    }
+
+    /* stampa matrice */
+    printf("\n");
     for (i = 0; i < SO_HEIGHT; i++)
     {
         for (j = 0; j < SO_WIDTH; j++)

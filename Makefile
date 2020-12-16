@@ -55,6 +55,12 @@ large: $(TARGET)
 	export SO_DURATION = 20;                                \
 	./$(TARGET)	
 
+andrea:
+	clear
+	make clear
+	make $(TARGET) 
+	./$(TARGET)
+
 # compilazione delle librerie
 sem_lib.o:
 	gcc -c sem_lib.c

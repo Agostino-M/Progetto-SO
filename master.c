@@ -34,7 +34,7 @@ typedef struct
 {
     int crossing_time;
     int nmax_taxi;
-    pid_t actual_pids[SO_CAP_MAX];
+    /*pid_t actual_pids[SO_CAP_MAX];*/
     int is_hole;
 } cell;
 
@@ -66,7 +66,7 @@ int main(int argc, char const *argv[])
     int id_shd_mem;
 
     /* creazione memoria condivisa */
-    id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0664);
+    id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0666);
     TEST_ERROR;
 
     /* attacching memoria condivisa */

@@ -12,8 +12,9 @@
 #include <sys/shm.h>
 #include <string.h>
 #include <time.h>
-#define SO_WIDTH 5
-#define SO_HEIGHT 5
+#include <math.h>
+#define SO_WIDTH 20
+#define SO_HEIGHT 10
 #define NUM_RISORSE SO_WIDTH *SO_HEIGHT
 #define INDEX(x, y) (y * SO_WIDTH) + x
 
@@ -28,7 +29,6 @@
                 errno,                             \
                 strerror(errno));                  \
     }
-
 
 typedef struct
 {
@@ -77,6 +77,6 @@ void print_resource(int id_sem);
  * - mat: puntatore alla strutta shared_map
  * - campo: indice del campo ( 1 = crossing_time ; 2 = crossing_cont ; 3 = is_hole ; 4 = nmax_taxi ) 
 */
-void stampa_matrice(struct shared_map * mat, int campo);
+void stampa_matrice(struct shared_map *mat, int campo);
 
 #endif /* UTILITY_H */

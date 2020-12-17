@@ -5,13 +5,7 @@ void print_resource(int id_sem)
     unsigned short sem_vals[NUM_RISORSE], i, j = 1;
 
     printf("\n");
-
     semctl(id_sem, 0 /* ignored */, GETALL, sem_vals);
-    /*
-		GETALL --> preleva i valori di tutti i semafori nel set riferito da sem_id, copiandoli 
-				   nell'array puntato da sem_vals. Devo garantire che sem_vals sia abbastanza capiente.
-				   In questo caso semnum viene ignorato
-	*/
     printf("  ");
     for (i = 0; i < NUM_RISORSE; i++)
     {
@@ -20,13 +14,10 @@ void print_resource(int id_sem)
         {
             printf("\n  ");
         }
-        /*GETVAL --> restituisce il valore del semaforo (numero) semnum nel set di semafori indicato da sem_id*/
-        /*Argomento args non richiesto*/
         j++;
     }
     printf("\n");
 }
-
 
 void stampa_matrice(struct shared_map *mat, int campo)
 {

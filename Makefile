@@ -2,7 +2,7 @@
 CFLAGS = -std=c89 -pedantic
 
 # elenco degli object file necessari
-OBJ = utility.o sem_lib.o master.o	# potrebbero mancare moduli oggetto (da controllare)
+OBJ = utility.o sem_lib.o handling.o master.o	# potrebbero mancare moduli oggetto (da controllare)
 
 # target di compilazione finale
 TARGET = master	# potrebbero mancare eseguibili (da controllare)

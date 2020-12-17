@@ -4,7 +4,7 @@ void print_resource(int id_sem)
 {
     unsigned short sem_vals[NUM_RISORSE], i, j = 1;
 
-    printf("\n");
+    printf("Matrice semafori delle capienze\n\n");
     semctl(id_sem, 0 /* ignored */, GETALL, sem_vals);
     printf("  ");
     for (i = 0; i < NUM_RISORSE; i++)
@@ -23,7 +23,7 @@ void stampa_matrice(struct shared_map *mat, int campo)
 {
     int i, j;
 
-    if (campo != 1 && campo != 2 && campo != 3)
+    if (campo != 1 && campo != 2 && campo != 3 && campo != 4)
     {
         fprintf(stderr, "Stampa: errore nel parametro campo\n");
         return;

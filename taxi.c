@@ -79,20 +79,17 @@ void creazione()
 
     srand(getpid());
 
-    while ()
+    do
     {
         random_x = rand() % SO_HEIGHT;
         random_y = rand() % SO_WIDTH;
 
         /* controllare semaforo della cella */
-        do
-        {
-            /* code */
+        dec_sem(id_sem_taxi, INDEX(random_x, random_y));
+        /* code */
 
-        } while (errno == EAGAIN);
-
-        /* aggiornamento campi della matrice condivisa */
-    }
+    } while (errno == EAGAIN);
+    /* aggiornamento campi della matrice condivisa */
 }
 
 int spostamento()

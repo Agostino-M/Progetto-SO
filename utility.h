@@ -13,21 +13,23 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#define _GNU_SOURCE
+#define FILEPATH "./taxi"
 #define SO_WIDTH 20
 #define SO_HEIGHT 10
 #define NUM_RISORSE SO_WIDTH *SO_HEIGHT
 #define INDEX(x, y) (y * SO_WIDTH) + x
 
-#define TEST_ERROR                                 \
-    if (errno)                                     \
-    {                                              \
-        fprintf(stderr,                            \
-                "%s:%d: PID=%5d: Error %d (%s)\n", \
-                __FILE__,                          \
-                __LINE__,                          \
-                getpid(),                          \
-                errno,                             \
-                strerror(errno));                  \
+#define TEST_ERROR                                \
+    if (errno)                                    \
+    {                                             \
+        fprintf(stderr,                           \
+                "%s:%d: PID:%d: Error %d (%s)\n", \
+                __FILE__,                         \
+                __LINE__,                         \
+                getpid(),                         \
+                errno,                            \
+                strerror(errno));                 \
     }
 
 typedef struct
@@ -41,7 +43,6 @@ typedef struct
 struct msg_request
 {
     long mtype;
-    /* data */
     coordinate start;
     coordinate end;
 };
@@ -78,6 +79,6 @@ void print_resource(int id_sem);
  * - mat: puntatore alla strutta shared_map
  * - campo: indice del campo ( 1 = crossing_time ; 2 = crossing_cont ; 3 = is_hole ; 4 = nmax_taxi ) 
 */
-void stampa_matrice(struct shared_map *mat, int campo);
+void print_matrix(struct shared_map *mat, int field);
 
 #endif /* UTILITY_H */

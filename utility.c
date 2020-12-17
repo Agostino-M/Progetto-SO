@@ -19,17 +19,17 @@ void print_resource(int id_sem)
     printf("\n");
 }
 
-void stampa_matrice(struct shared_map *mat, int campo)
+void print_matrix(struct shared_map *mat, int field)
 {
     int i, j;
 
-    if (campo != 1 && campo != 2 && campo != 3 && campo != 4)
+    if (field != 1 && field != 2 && field != 3 && field != 4)
     {
-        fprintf(stderr, "Stampa: errore nel parametro campo\n");
+        fprintf(stderr, "Stampa: errore nel parametro field\n");
         return;
     }
 
-    switch (campo)
+    switch (field)
     {
     case 1:
         printf("Stampa: crossing_time\n\n");
@@ -56,7 +56,7 @@ void stampa_matrice(struct shared_map *mat, int campo)
         printf("  ");
         for (j = 0; j < SO_WIDTH; j++)
         {
-            switch (campo)
+            switch (field)
             {
             case 1:
                 printf("%2d ", mat->matrix[i][j].crossing_time);

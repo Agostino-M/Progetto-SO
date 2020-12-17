@@ -8,7 +8,7 @@ void fill_resource();
 
 /* variabili globali */
 unsigned int SO_HOLES = 10;
-unsigned int SO_SOURCES = 190;
+unsigned int SO_SOURCES = 20;
 unsigned int SO_CAP_MIN = 1;
 unsigned int SO_CAP_MAX = 10;
 unsigned int SO_TAXI = 95;
@@ -26,8 +26,8 @@ struct shared_map *city;
 int main(int argc, char const *argv[])
 {
     /* dichiarazione variabili */
-    int id_shd_mem, cond, tentativi = 0;
-
+    int id_shd_mem, id_msg_queue, cond, tentativi = 0, i, random_x_p, random_y_p, random_x_a, random_y_a;
+    struct msg_request request;
     /* creazione signal header
     struct sigaction sa;
     bzero(&sa, sizeof(struct sigaction));
@@ -47,11 +47,15 @@ int main(int argc, char const *argv[])
     id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
 
+    /* creazione coda di messaggi */
+    id_msg_queue = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | 0600);
+    TEST_ERROR
+
     /* creazione matrice */
     if (SO_HOLES > (ceil(SO_HEIGHT / 2.0) * ceil(SO_WIDTH / 2.0)))
     {
-        fprintf(stderr, "Errore : impossibile creare la matrice con questi parametri\n");
-        return 0;
+        fprintf(stderr, "Master : impossibile creare la matrice con questi parametri\n");
+        exit(EXIT_FAILURE);
     }
     else
     {
@@ -62,11 +66,54 @@ int main(int argc, char const *argv[])
     }
 
     stampa_matrice(city, 3);
-
     fill_resource();
     print_resource(id_sem_cap);
 
     /* creazione richieste */
+    for (i = 0; i < SO_SOURCES; i++)
+    {
+        switch (fork())
+        {
+        case -1:
+            TEST_ERROR
+            break;
+
+        case 0:
+            srand(getpid());
+
+            /* Estraggo coordinate partenza */
+            do
+            {
+                random_x_p = rand() % SO_HEIGHT;
+                random_y_p = rand() % SO_WIDTH;
+            } while (city->matrix[random_x_p][random_y_p].is_hole && city->matrix[random_x_p][random_y_p].is_request);
+
+            city->matrix[random_x_p][random_y_p].is_request = 1;
+
+            /* Estraggo coordinate arrivo */
+            do
+            {
+                random_x_a = rand() % SO_HEIGHT;
+                random_y_a = rand() % SO_WIDTH;
+            } while (city->matrix[random_x_a][random_y_a].is_hole && random_x_a == random_x_p && random_y_a == random_y_p);
+
+            request.mtype = getpid();
+            request.start.x = random_x_p;
+            request.start.y = random_y_p;
+            request.end.x = random_x_a;
+            request.end.y = random_y_a;
+            printf("(%d) Nuova richiesta creata : \n - Partenza x : %d \n - Partenza y : %d \n - Arrivo x : %d \n - Arrivo y : %d\n",
+                   getpid(),request.start.x, request.start.y, request.end.x, request.end.y);
+
+            msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
+            TEST_ERROR
+
+            exit(EXIT_SUCCESS);
+
+        default:
+            break;
+        }
+    }
 
     /* creazione taxi */
 
@@ -83,7 +130,16 @@ int main(int argc, char const *argv[])
     /* Eliminazione semafori */
     semctl(id_sem_cap, IPC_RMID, 0);
     semctl(id_sem_taxi, IPC_RMID, 0);
+    if (errno == -1)
+    {
+        errno = 0;
+    }
 
+    /* Chiusura coda di messaggi */
+    msgctl(id_msg_queue, IPC_RMID, 0);
+    TEST_ERROR
+
+    sleep(15);
     return 0;
 }
 
@@ -102,6 +158,7 @@ int creaMatrice()
             city->matrix[i][j].crossing_time = random;
             city->matrix[i][j].is_hole = 0;
             city->matrix[i][j].crossing_cont = 0;
+            city->matrix[i][j].is_request = 0;
         }
     }
 
@@ -149,7 +206,7 @@ int creaMatrice()
             tentativi++;
             if (tentativi > 30)
             {
-                return 1; /* Failed */
+                return -1; /* Failed */
             }
 
             continue;

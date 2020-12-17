@@ -46,6 +46,9 @@ void stampa_matrice(struct shared_map *mat, int campo)
     case 4:
         printf("Stampa: nmax_taxi\n\n");
         break;
+    case 5:
+        printf("Stampa: is_request\n\n");
+        break;
     }
 
     for (i = 0; i < SO_HEIGHT; i++)
@@ -70,10 +73,13 @@ void stampa_matrice(struct shared_map *mat, int campo)
             case 4:
                 printf("%2d ", mat->matrix[i][j].nmax_taxi);
                 break;
+
+            case 5:
+                printf("%2d ", mat->matrix[i][j].is_request);
+                break;
             }
         }
         printf("\n");
     }
-
     printf("\n");
 }

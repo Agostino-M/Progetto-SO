@@ -32,8 +32,8 @@
 
 typedef struct
 {
-    int row;
-    int column;
+    int x;
+    int y;
 } coordinate;
 
 #define REQUEST_LENGTH (sizeof(coordinate) + sizeof(coordinate))
@@ -53,6 +53,7 @@ typedef struct
     /*pid_t actual_pids[SO_CAP_MAX];*/
     int is_hole;
     int crossing_cont;
+    int is_request;
 } cell;
 
 struct shared_map

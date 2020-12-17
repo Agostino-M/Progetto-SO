@@ -2,25 +2,12 @@
 #include "utility.h"
 #include "handling.h"
 
-/* parametri definiti a tempo di compilazione
-#ifdef DENSE
-#define SO_WIDTH 20
-#define SO_HEIGHT 10
-#elif LARGE
-#define SO_WIDTH 60
-#define SO_HEIGHT 20
-#else
-#define SO_WIDTH 10
-#define SO_HEIGHT 10
-#endif
-*/
-
 /* prototipi di funzioni */
-void creaMatrice();
+int creaMatrice();
 void fill_resource();
 
 /* variabili globali */
-unsigned int SO_HOLES = 2;
+unsigned int SO_HOLES = 10;
 unsigned int SO_SOURCES = 190;
 unsigned int SO_CAP_MIN = 1;
 unsigned int SO_CAP_MAX = 10;
@@ -39,7 +26,7 @@ struct shared_map *city;
 int main(int argc, char const *argv[])
 {
     /* dichiarazione variabili */
-    int id_shd_mem;
+    int id_shd_mem, cond, tentativi = 0;
 
     /* creazione signal header
     struct sigaction sa;
@@ -61,7 +48,21 @@ int main(int argc, char const *argv[])
     TEST_ERROR
 
     /* creazione matrice */
-    creaMatrice();
+    if (SO_HOLES > (ceil(SO_HEIGHT / 2.0) * ceil(SO_WIDTH / 2.0)))
+    {
+        fprintf(stderr, "Errore : impossibile creare la matrice con questi parametri\n");
+        return 0;
+    }
+    else
+    {
+        do
+        {
+            cond = creaMatrice();
+        } while (cond != 0);
+    }
+
+    stampa_matrice(city, 3);
+
     fill_resource();
     print_resource(id_sem_cap);
 
@@ -86,9 +87,9 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-void creaMatrice()
+int creaMatrice()
 {
-    int i, j, z, i_holes, j_holes, hole_inseriti = 0, cond = 1;
+    int i, j, z, i_holes, j_holes, hole_inseriti = 0, cond = 1, tentativi = 0;
     unsigned long int random;
 
     srand(getpid());
@@ -145,11 +146,17 @@ void creaMatrice()
         else
         {
             z--;
+            tentativi++;
+            if (tentativi > 30)
+            {
+                return 1; /* Failed */
+            }
+
             continue;
         }
     }
 
-    stampa_matrice(city, 3);
+    return 0;
 }
 
 void fill_resource()

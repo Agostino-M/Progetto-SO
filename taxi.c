@@ -1,19 +1,27 @@
 #include "utility.h"
 #include "sem_lib.h"
 
-/* prootipi funzioni */
-void creazione();
-int spostamento();
+/* Prototipi funzioni */
+void create_taxi();
 void signal_handler();
+int move();
+int move_up(int x, int y);
+int move_down(int x, int y);
+int move_left(int x, int y);
+int move_right(int x, int y);
 
 int id_shd_mem;
 int id_msg_queue;
 int id_sem_cap;
 int id_sem_taxi;
 
+struct shared_map *city;
+
+coordinate actual_position; /* Eventualmente con struct */
+
 int main(int argc, char const *argv[])
 {
-    /* controllo dei parametri ricevuti */
+    /* Controllo dei parametri ricevuti */
     if (argc != 5)
     {
         fprintf(stderr, "Taxi PID:%d: numero di parametri errato.\n", getpid());
@@ -21,7 +29,7 @@ int main(int argc, char const *argv[])
     }
 
     /* 
-     * prelievo argomenti argv 
+     * Prelievo argomenti argv 
      * - argv[1] = id memoria condivisa
      * - argv[2] = id coda di messaggi per le richieste
      * - argv[3] = id semaforo delle capacità massime per taxi su una cella
@@ -32,50 +40,59 @@ int main(int argc, char const *argv[])
     id_sem_cap = atoi(argv[3]);
     id_sem_taxi = atoi(argv[4]);
 
-    /* dichiarazione variabili */
-    int msg_type;
-    int msg_flag;
+    /* Dichiarazione variabili */
     struct msg_request request;
-    struct shared_map *city;
 
-    /* creazione signal header */
+    /* Creazione signal header */
     struct sigaction sa;
     bzero(&sa, sizeof(struct sigaction));
     sa.sa_handler = signal_handler;
     sigaction(SIGALRM, &sa, NULL);
 
-    /* attacching memoria condivisa */
+    /* Attacching memoria condivisa */
     city = shmat(id_shd_mem, NULL, 0);
     TEST_ERROR
 
-    /* creazione in posizione casuale */
-    creazione();
+    /* Creazione in posizione casuale */
+    create_taxi();
 
-    /* semaforo wait for zero */
-    wait_sem_zero(id_sem_taxi, index);
+    /* Semaforo wait for zero */
+    wait_sem_zero(id_sem_taxi, 0);
 
-    /* prelievo richieste con coda */
-    msgrcv(id_msg_queue, &request, REQUEST_LENGTH, msg_type, msg_flag);
-    TEST_ERROR
+    /* Prelievo richieste con coda */
+    do
+    {
+        msgrcv(id_msg_queue, &request, REQUEST_LENGTH, 0, MSG_COPY | IPC_NOWAIT);
 
-    /* parte il timer SO_TIMEOUT */
+        if (request.start.x == actual_position.x && request.start.y == actual_position.y)
+            msgrcv(id_msg_queue, &request, REQUEST_LENGTH, request.mtype, IPC_NOWAIT);
+        else
+            /*msgrcv(id_msg_queue, &request, REQUEST_LENGTH, request.mtype, MSG_EXCEPT | IPC_NOWAIT);*/
+            sleep(1); //se nessun taxi può accettare la richiesta, nessnuo libererà la coda da quel messaggio (DEADLOCK)
+                      //si risolve con un numero max di tentativi? se si supera cosa fa il taxi? (es si ricrea in altra posizione, boh)
+        /*
+         * ENOMSG IPC_NOWAIT was specified in msgflg and no message of the
+         * requested type existed on the message queue
+         */
+    } while (errno == ENOMSG);
+
+    /* Parte il timer SO_TIMEOUT */
     alarm(SO_TIMEOUT);
 
-    /* spostamento */
-    spostamento();
+    /* Spostamento */
+    move();
 
-    /* detaching memoria condivisa */
+    /* Detaching memoria condivisa */
     shmdt(city);
     TEST_ERROR
 
-    /* fine */
+    /* Fine */
     return 0;
 }
 
-void creazione()
+void create_taxi()
 {
-    int random_x;
-    int random_y;
+    int random_x, random_y, attempts = 0;
 
     srand(getpid());
 
@@ -84,16 +101,17 @@ void creazione()
         random_x = rand() % SO_HEIGHT;
         random_y = rand() % SO_WIDTH;
 
-        /* controllare semaforo della cella */
-        dec_sem(id_sem_taxi, INDEX(random_x, random_y));
-        /* code */
+        if (!city->matrix[random_x][random_y].is_hole)
+            dec_sem_nw(id_sem_cap, INDEX(random_x, random_y));
 
-    } while (errno == EAGAIN);
-    /* aggiornamento campi della matrice condivisa */
-}
+    } while (errno == EAGAIN || city->matrix[random_x][random_y].is_hole || attempts < 30);
 
-int spostamento()
-{
+    /* Aggiorno le posizioni attuali del taxi */
+    actual_position.x = random_x;
+    actual_position.y = random_y;
+
+    /* Aggiornamento campi della matrice condivisa */
+    city->matrix[random_x][random_y].crossing_cont++;
 }
 
 void signal_handler(int signum)
@@ -103,6 +121,65 @@ void signal_handler(int signum)
         printf("Taxi PID:%d: Timer scaduto...\n", getpid());
         /* - gestire caso in cui stava gestendo una richiesta
          * - gestire rilascio di risorse (semafori)
-        */
+         */
     }
+}
+
+int move()
+{
+    /* usare move_up/down/left/right per arrivare alla destinazione :) 
+     * https://rosettacode.org/wiki/A*_search_algorithm#C
+     */
+}
+
+int move_up(int x, int y)
+{
+    if (city->matrix[x][y + 1].is_hole)
+        return -1;
+
+    dec_sem(id_sem_cap, INDEX(x, y + 1));
+
+    city->matrix[x][y + 1].crossing_cont++;
+    sleep(city->matrix[x][y + 1].crossing_time);
+
+    return 0;
+}
+
+int move_down(int x, int y)
+{
+    if (city->matrix[x][y - 1].is_hole)
+        return -1;
+
+    dec_sem(id_sem_cap, INDEX(x, y - 1));
+
+    city->matrix[x][y - 1].crossing_cont++;
+    sleep(city->matrix[x][y - 1].crossing_time);
+
+    return 0;
+}
+
+int move_left(int x, int y)
+{
+    if (city->matrix[x - 1][y].is_hole)
+        return -1;
+
+    dec_sem(id_sem_cap, INDEX(x - 1, y));
+
+    city->matrix[x - 1][y].crossing_cont++;
+    sleep(city->matrix[x - 1][y].crossing_time);
+
+    return 0;
+}
+
+int move_right(int x, int y)
+{
+    if (city->matrix[x + 1][y].is_hole)
+        return -1;
+
+    dec_sem(id_sem_cap, INDEX(x + 1, y));
+
+    city->matrix[x + 1][y].crossing_cont++;
+    sleep(city->matrix[x + 1][y].crossing_time);
+
+    return 0;
 }

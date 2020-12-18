@@ -17,6 +17,7 @@ unsigned long int SO_TIMENSEC_MIN = 100000000;
 unsigned long int SO_TIMENSEC_MAX = 300000000;
 unsigned int SO_TIMEOUT = 1;
 unsigned int SO_DURATION = 20;
+int request_flag = 0;
 
 /* ID dell'IPC del semaforo e` globale */
 int id_sem_cap, id_sem_taxi;
@@ -26,14 +27,15 @@ struct shared_map *city;
 int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
-    int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a;
+    int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request;
+    sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
     struct sembuf sem_taxi_w0;
 
     /* Creazione signal header */
     bzero(&sa, sizeof(struct sigaction));
-    sa.sa_handler = &signal_handler;
+    sa.sa_handler = signal_handler;
     sigaction(SIGALRM, &sa, NULL);
 
     /* Creazione memoria condivisa */
@@ -88,16 +90,28 @@ int main(int argc, char const *argv[])
             break;
 
         case 0:
+            /* Creazione signal header */
+            bzero(&sa, sizeof(struct sigaction));
+            sa.sa_handler = request_handler;
+            sigaction(SIGALRM, &sa, NULL);
+
             srand(getpid());
+            random_request = rand() % 5 + 1;
+            alarm(random_request);
+
+            sigemptyset(&my_mask);
+            sigfillset(&my_mask);
+            sigdelset(&my_mask, SIGALRM);
+            sigsuspend(&my_mask);
 
             /* Estraggo coordinate partenza */
             do
             {
                 random_x_p = rand() % SO_HEIGHT;
                 random_y_p = rand() % SO_WIDTH;
-            } while (city->matrix[random_x_p][random_y_p].is_hole && city->matrix[random_x_p][random_y_p].is_request);
+            } while (city->matrix[random_x_p][random_y_p].is_hole && city->matrix[random_x_p][random_y_p].request_pid != 0);
 
-            city->matrix[random_x_p][random_y_p].is_request = 1;
+            city->matrix[random_x_p][random_y_p].request_pid = getpid();
 
             /* Estraggo coordinate arrivo */
             do
@@ -204,7 +218,7 @@ int create_matrix()
             city->matrix[i][j].crossing_time = random;
             city->matrix[i][j].is_hole = 0;
             city->matrix[i][j].crossing_cont = 0;
-            city->matrix[i][j].is_request = 0;
+            city->matrix[i][j].request_pid = 0;
         }
     }
 
@@ -249,7 +263,7 @@ int create_matrix()
             if (attempts > 30)
                 return -1; /* Fallimento */
 
-            continue; // si può omettere?
+            continue; /*SERVE ??????*/
         }
     }
     return 0;

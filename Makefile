@@ -1,11 +1,11 @@
 # Flags per la compilazione
 CFLAGS = -std=c89 -pedantic
 
-# elenco degli object file necessari
-OBJ = utility.o sem_lib.o handling.o master.o	# potrebbero mancare moduli oggetto (da controllare)
+# Elenco degli object file necessari
+OBJ = utility.o sem_lib.o handling.o taxi.o master.o
 
-# target di compilazione finale
-TARGET = master	# potrebbero mancare eseguibili (da controllare)
+# Target di compilazione finale
+TARGET = master	# Potrebbero mancare eseguibili (da controllare)
 
 
 $(TARGET): $(OBJ)
@@ -13,7 +13,7 @@ $(TARGET): $(OBJ)
 
 all: $(TARGET)
 
-clear:				# lascia soltanto i file sorgente
+clear:				# Lascia soltanto i file sorgente
 	rm -f *.o $(TARGET) *~
 	unset SO_HOLES;                                     \
 	unset SO_TOP_CELLS;                                 \
@@ -26,7 +26,7 @@ clear:				# lascia soltanto i file sorgente
 	unset SO_TIMEOUT;                                   \
 	unset SO_DURATION;                                  \
 
-run: $(TARGET)	# target per eseguire. Necessita dell'eseguibile
+run: $(TARGET)	# Target per eseguire. Necessita dell'eseguibile
 	./$(TARGET)
 
 dense: $(TARGET)
@@ -55,16 +55,19 @@ large: $(TARGET)
 	export SO_DURATION = 20;                                \
 	./$(TARGET)	
 
+# Preset personalizzato secondo le esigenze di andrea :)
 andrea:
 	clear
 	make clear
 	make $(TARGET) 
 	./$(TARGET)
 
-# compilazione delle librerie
-sem_lib.o:
+# Compilazione delle librerie
+sem_lib:
 	gcc -c sem_lib.c
 
-utility.o:
+utility:
 	gcc -c utility.c
 
+handling:
+	gcc -c handling.c

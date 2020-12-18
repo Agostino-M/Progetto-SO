@@ -1,5 +1,6 @@
 #ifndef UTILITY_H
 #define UTILITY_H
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
@@ -13,7 +14,6 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#define _GNU_SOURCE
 #define FILEPATH "./taxi"
 #define SO_WIDTH 20
 #define SO_HEIGHT 10

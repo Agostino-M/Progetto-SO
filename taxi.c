@@ -21,6 +21,10 @@ coordinate actual_position; /* Eventualmente con struct */
 
 int main(int argc, char const *argv[])
 {
+    /* Dichiarazione variabili */
+    struct msg_request request;
+    struct sigaction sa;
+
     /* Controllo dei parametri ricevuti */
     if (argc != 5)
     {
@@ -40,11 +44,7 @@ int main(int argc, char const *argv[])
     id_sem_cap = atoi(argv[3]);
     id_sem_taxi = atoi(argv[4]);
 
-    /* Dichiarazione variabili */
-    struct msg_request request;
-
     /* Creazione signal header */
-    struct sigaction sa;
     bzero(&sa, sizeof(struct sigaction));
     sa.sa_handler = signal_handler;
     sigaction(SIGALRM, &sa, NULL);

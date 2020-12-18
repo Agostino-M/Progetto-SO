@@ -54,7 +54,7 @@ typedef struct
     /*pid_t actual_pids[SO_CAP_MAX];*/
     int is_hole;
     int crossing_cont;
-    int is_request;
+    pid_t request_pid;
 } cell;
 
 struct shared_map

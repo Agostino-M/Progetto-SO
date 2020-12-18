@@ -16,3 +16,10 @@ void signal_handler(int signum)
         /* Crea una richiesta a mano / Richiama una funzione */
     }
 }
+
+void request_handler(int signum)
+{
+    printf("Source PID:%d : segnale SIGALRM ricevuto", getpid());
+}
+
+

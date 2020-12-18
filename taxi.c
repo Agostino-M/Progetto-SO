@@ -2,7 +2,7 @@
 #include "sem_lib.h"
 
 /* Prototipi funzioni */
-void create_taxi();
+int create_taxi();
 void signal_handler();
 int move();
 int move_up(int x, int y);
@@ -54,30 +54,21 @@ int main(int argc, char const *argv[])
     TEST_ERROR
 
     /* Creazione in posizione casuale */
-    create_taxi();
+    if (create_taxi() == -1)
+        fprintf(stderr, "Taxi PID:%d: Impossibile effettuare la creazione.\n", getpid());
 
     /* Semaforo wait for zero */
     wait_sem_zero(id_sem_taxi, 0);
 
     /* Prelievo richieste con coda */
-    do
-    {
-        msgrcv(id_msg_queue, &request, REQUEST_LENGTH, 0, MSG_COPY | IPC_NOWAIT);
+    while (city->matrix[actual_position.x][actual_position.y].request_pid == 0)
+        sleep(2);
 
-        if (request.start.x == actual_position.x && request.start.y == actual_position.y)
-            msgrcv(id_msg_queue, &request, REQUEST_LENGTH, request.mtype, IPC_NOWAIT);
-        else
-            /*msgrcv(id_msg_queue, &request, REQUEST_LENGTH, request.mtype, MSG_EXCEPT | IPC_NOWAIT);*/
-            sleep(1); //se nessun taxi può accettare la richiesta, nessnuo libererà la coda da quel messaggio (DEADLOCK)
-                      //si risolve con un numero max di tentativi? se si supera cosa fa il taxi? (es si ricrea in altra posizione, boh)
-        /*
-         * ENOMSG IPC_NOWAIT was specified in msgflg and no message of the
-         * requested type existed on the message queue
-         */
-    } while (errno == ENOMSG);
+    msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[actual_position.x][actual_position.y].request_pid, 0);
+    TEST_ERROR
 
     /* Parte il timer SO_TIMEOUT */
-    alarm(SO_TIMEOUT);
+    alarm(10); /* SO_TIMEOUT */
 
     /* Spostamento */
     move();
@@ -90,7 +81,7 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-void create_taxi()
+int create_taxi()
 {
     int random_x, random_y, attempts = 0;
 
@@ -105,6 +96,9 @@ void create_taxi()
             dec_sem_nw(id_sem_cap, INDEX(random_x, random_y));
 
     } while (errno == EAGAIN || city->matrix[random_x][random_y].is_hole || attempts < 30);
+
+    if (attempts == 30)
+        return -1;
 
     /* Aggiorno le posizioni attuali del taxi */
     actual_position.x = random_x;

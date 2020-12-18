@@ -40,6 +40,19 @@ int set_sem(int sem_id, int index, int sem_val);
 void dec_sem(int sem_id, int index);
 
 /*
+ * Tenta di accedere alla risorsa (NON BLOCCANTE)
+ * INPUT:
+ * - sem_id: ID del semaforo
+ * - index: posizione del semaforo nell'array
+ * - flag
+ * RISULTATO
+ * - Se la risorsa è disponibile il semaforo è decrementato di 1
+ * - Se la risorsa non è disponibile (valore semaforo = 0), il
+ *   processo termina con errno = EAGAIN.
+ */
+void dec_sem_nw(int sem_id, int index);
+
+/*
  * Rilascia la risorsa
  * INPUT:
  * - sem_id: ID del semaforo

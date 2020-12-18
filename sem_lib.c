@@ -14,6 +14,15 @@ void dec_sem(int sem_id, int index)
     semop(sem_id, &sops, 1);
 }
 
+void dec_sem_nw(int sem_id, int index)
+{
+    struct sembuf sops;
+    sops.sem_num = index;
+    sops.sem_op = -1;
+    sops.sem_flg = IPC_NOWAIT;
+    semop(sem_id, &sops, 1);
+}
+
 void rel_sem(int sem_id, int index)
 {
     struct sembuf sops;

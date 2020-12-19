@@ -14,6 +14,7 @@ int id_shd_mem;
 int id_msg_queue;
 int id_sem_cap;
 int id_sem_taxi;
+int id_sem_request;
 
 struct shared_map *city;
 
@@ -38,11 +39,13 @@ int main(int argc, char const *argv[])
      * - argv[2] = id coda di messaggi per le richieste
      * - argv[3] = id semaforo delle capacità massime per taxi su una cella
      * - argv[4] = id semaforo "wait for zero" che dà il via ai taxi
+     * - argv[5] = id semaforo che indica la presenza di una richiesta
      */
     id_shd_mem = atoi(argv[1]);
     id_msg_queue = atoi(argv[2]);
     id_sem_cap = atoi(argv[3]);
     id_sem_taxi = atoi(argv[4]);
+    id_sem_request = atoi(argv[5]);
 
     /* Creazione signal header */
     bzero(&sa, sizeof(struct sigaction));
@@ -61,9 +64,7 @@ int main(int argc, char const *argv[])
     wait_sem_zero(id_sem_taxi, 0);
 
     /* Prelievo richieste con coda */
-    while (city->matrix[actual_position.x][actual_position.y].request_pid == 0)
-        sleep(2);
-    /* NOTA: potrebbe essere fatto anche con una matrice di semafori relativi alle richieste con una wait_for_zero */
+    dec_sem(id_sem_request, INDEX(actual_position.x, actual_position.y));
 
     msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[actual_position.x][actual_position.y].request_pid, 0);
     TEST_ERROR

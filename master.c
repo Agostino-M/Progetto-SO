@@ -20,7 +20,7 @@ unsigned int SO_DURATION = 20;
 int request_flag = 0;
 
 /* ID dell'IPC del semaforo e` globale */
-int id_sem_cap, id_sem_taxi;
+int id_sem_cap, id_sem_taxi, id_sem_request;
 
 struct shared_map *city;
 
@@ -28,6 +28,7 @@ int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
     int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request;
+
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
@@ -48,6 +49,15 @@ int main(int argc, char const *argv[])
     /* Creazione array semafori capienza */
     id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
+
+    /* creazione semaforo  richieste */
+    id_sem_request = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
+    TEST_ERROR
+    for (i = 0; i < NUM_RISORSE; i++)
+    {
+        set_sem(id_sem_request, i, 0);
+        TEST_ERROR
+    }
 
     /* creazione semaforo "wait for zero" taxi */
     id_sem_taxi = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600);
@@ -102,6 +112,7 @@ int main(int argc, char const *argv[])
             sigfillset(&my_mask);
             sigdelset(&my_mask, SIGALRM);
             sigsuspend(&my_mask);
+            errno = 0;
 
             /* Estraggo coordinate partenza */
             do
@@ -135,6 +146,8 @@ int main(int argc, char const *argv[])
             msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
             TEST_ERROR
 
+            rel_sem(id_sem_request, INDEX(request.start.x, request.start.y));
+
             exit(EXIT_SUCCESS);
 
         default:
@@ -152,24 +165,20 @@ int main(int argc, char const *argv[])
             break;
 
         case 0:
+        {
             /* 
             * Argomenti args
             * - argv[1] = id memoria condivisa
             * - argv[2] = id coda di messaggi per le richieste
             * - argv[3] = id semaforo delle capacità massime per taxi su una cella
             * - argv[4] = id semaforo "wait for zero" che dà il via ai taxi
+            * - argv[5] = id semaforo che indica la presenza di una richiesta
             */
-            char *args[] = {
-                FILEPATH,
-                id_shd_mem,
-                id_msg_queue,
-                id_sem_cap,
-                id_sem_taxi,
-                NULL};
+            execlp(FILEPATH, "" + id_shd_mem, "" + id_msg_queue, "" + id_sem_cap, "" + id_sem_request, "" + id_sem_taxi, NULL);
 
-            execve(FILEPATH, args, NULL);
+            /*execve(FILEPATH, args, NULL);*/
             exit(EXIT_FAILURE);
-
+        }
         default:
             break;
         }
@@ -183,6 +192,7 @@ int main(int argc, char const *argv[])
     alarm(SO_DURATION);
 
     /* attesa figli? */
+    sleep(10);
 
     /* Detaching ed eliminazione memoria condivisa */
     shmdt(city);
@@ -229,14 +239,14 @@ int create_matrix()
         i_holes = rand() % SO_HEIGHT;
         j_holes = rand() % SO_WIDTH;
 
-        if (i_holes == 0) // Caso particolare - aggiungere info */
+        if (i_holes == 0) /* Riga i estratta è il bordo superiore (i=0) */
             i = i_holes;
         else
             i = i_holes - 1;
 
         for (i; i <= i_holes + 1 && cond == 1; i++)
         {
-            if (j_holes == 0) // Caso particolare - aggiungere info */
+            if (j_holes == 0) /* Colonna j estratta è il bordo laterale sinistro (j=0)*/
                 j = j_holes;
             else
                 j = j_holes - 1;
@@ -270,17 +280,13 @@ int create_matrix()
 
 void fill_resource()
 {
-    // Usare sem_set dichiarato in libreria? */
     struct sembuf sops[NUM_RISORSE];
-    int i, j, random;
+    int i, j;
     srand(getpid());
 
     for (i = 0; i < NUM_RISORSE; i++)
     {
-        random = (rand() % SO_CAP_MAX) + SO_CAP_MIN;
-        sops[i].sem_num = i;
-        sops[i].sem_op = random;
+        set_sem(id_sem_cap, i, rand() % SO_CAP_MAX + SO_CAP_MIN);
+        TEST_ERROR
     }
-    semop(id_sem_cap, sops, NUM_RISORSE);
-    TEST_ERROR
 }

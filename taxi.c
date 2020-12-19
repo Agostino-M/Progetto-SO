@@ -63,6 +63,7 @@ int main(int argc, char const *argv[])
     /* Prelievo richieste con coda */
     while (city->matrix[actual_position.x][actual_position.y].request_pid == 0)
         sleep(2);
+    /* NOTA: potrebbe essere fatto anche con una matrice di semafori relativi alle richieste con una wait_for_zero */
 
     msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[actual_position.x][actual_position.y].request_pid, 0);
     TEST_ERROR

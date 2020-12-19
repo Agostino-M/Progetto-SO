@@ -31,7 +31,6 @@ int main(int argc, char const *argv[])
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
-    struct sembuf sem_taxi_w0;
 
     /* Creazione signal header */
     bzero(&sa, sizeof(struct sigaction));
@@ -121,7 +120,7 @@ int main(int argc, char const *argv[])
             } while (city->matrix[random_x_a][random_y_a].is_hole && random_x_a == random_x_p && random_y_a == random_y_p);
 
             /* Write del messaggio sulla coda */
-            request.mtype = getpid();
+            request.mtype = (long)getpid();
             request.start.x = random_x_p;
             request.start.y = random_y_p;
             request.end.x = random_x_a;

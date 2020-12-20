@@ -3,7 +3,7 @@
 
 /* Prototipi funzioni */
 int create_taxi();
-void signal_handler();
+void alarm_handler();
 int move();
 int move_up(int x, int y);
 int move_down(int x, int y);
@@ -19,6 +19,7 @@ int id_sem_request;
 struct shared_map *city;
 
 coordinate actual_position; /* Eventualmente con struct */
+int doing_request = 0;      /* Indica se il taxi sta eseguendo una richiesta */
 
 int main(int argc, char const *argv[])
 {
@@ -27,9 +28,9 @@ int main(int argc, char const *argv[])
     struct sigaction sa;
 
     /* Controllo dei parametri ricevuti */
-    if (argc != 5)
+    if (argc != 6)
     {
-        fprintf(stderr, "Taxi PID:%d: numero di parametri errato.\n", getpid());
+        fprintf(stderr, "Taxi PID:%d : Numero di parametri errato.\n", getpid());
         exit(EXIT_FAILURE);
     }
 
@@ -49,7 +50,7 @@ int main(int argc, char const *argv[])
 
     /* Creazione signal header */
     bzero(&sa, sizeof(struct sigaction));
-    sa.sa_handler = signal_handler;
+    sa.sa_handler = alarm_handler;
     sigaction(SIGALRM, &sa, NULL);
 
     /* Attacching memoria condivisa */
@@ -58,16 +59,26 @@ int main(int argc, char const *argv[])
 
     /* Creazione in posizione casuale */
     if (create_taxi() == -1)
-        fprintf(stderr, "Taxi PID:%d: Impossibile effettuare la creazione.\n", getpid());
+        fprintf(stderr, "Taxi PID:%d : Impossibile effettuare la creazione.\n", getpid());
+
+    printf("Taxi PID:%d : Buongiornissimo, sono stato creato in (%d,%d):\n", getpid(), actual_position.x, actual_position.y);
 
     /* Semaforo wait for zero */
     wait_sem_zero(id_sem_taxi, 0);
 
     /* Prelievo richieste con coda */
+    printf("Taxi PID:%d : Attendo una richiesta...\n", getpid());
     dec_sem(id_sem_request, INDEX(actual_position.x, actual_position.y));
 
     msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[actual_position.x][actual_position.y].request_pid, 0);
     TEST_ERROR
+    printf("Taxi PID:%d : Richiesta trovata: \n"
+           "- Partenza x : %d\n"
+           "- Partenza y : %d \n"
+           "- Arrivo x : %d \n"
+           "- Arrivo y : %d\n",
+           getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
+    doing_request = 1;
 
     /* Parte il timer SO_TIMEOUT */
     alarm(10); /* SO_TIMEOUT */
@@ -95,12 +106,17 @@ int create_taxi()
         random_y = rand() % SO_WIDTH;
 
         if (!city->matrix[random_x][random_y].is_hole)
+        {
             dec_sem_nw(id_sem_cap, INDEX(random_x, random_y));
+            attempts++;
+        }
 
-    } while (errno == EAGAIN || city->matrix[random_x][random_y].is_hole || attempts < 30);
+        if (attempts == 30)
+            return -1;
 
-    if (attempts == 30)
-        return -1;
+    } while (errno == EAGAIN || city->matrix[random_x][random_y].is_hole);
+
+    errno = 0;
 
     /* Aggiorno le posizioni attuali del taxi */
     actual_position.x = random_x;
@@ -108,16 +124,30 @@ int create_taxi()
 
     /* Aggiornamento campi della matrice condivisa */
     city->matrix[random_x][random_y].crossing_cont++;
+
+    return 0;
 }
 
-void signal_handler(int signum)
+void alarm_handler(int signum)
 {
+    printf("I'm signal handler\n");
     if (signum == SIGALRM)
     {
-        printf("Taxi PID:%d: Timer scaduto...\n", getpid());
+        printf("Taxi PID:%d : Timer scaduto...\n", getpid());
         /* - gestire caso in cui stava gestendo una richiesta
          * - gestire rilascio di risorse (semafori)
          */
+        rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+
+        if (doing_request)
+        {
+            /* si comunica che la richiesta è stata abortita */
+        }
+
+        /* Detaching memoria condivisa */
+        shmdt(city);
+        TEST_ERROR
+        exit(EXIT_SUCCESS);
     }
 }
 
@@ -126,6 +156,8 @@ int move()
     /* usare move_up/down/left/right per arrivare alla destinazione :) 
      * https://rosettacode.org/wiki/A*_search_algorithm#C
      */
+    sleep(10);
+    doing_request = 0; /* richiesta completata */
 }
 
 int move_up(int x, int y)

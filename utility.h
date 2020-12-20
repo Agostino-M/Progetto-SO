@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/sem.h>
@@ -14,7 +16,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#define FILEPATH "./taxi"
+#define FILEPATH "./Taxi"
 #define SO_WIDTH 20
 #define SO_HEIGHT 10
 #define NUM_RISORSE SO_WIDTH *SO_HEIGHT
@@ -64,7 +66,7 @@ struct shared_map
 
 #define SHARED_MAP_LENGTH (sizeof(struct shared_map))
 
-/* --------------SEZIONE STAMPA----------------- */
+/* -----------------SEZIONE STAMPA----------------- */
 
 /*
  * Stampa i valori dell'array di semafori indicato da id_sem

@@ -32,6 +32,7 @@
                 getpid(),                         \
                 errno,                            \
                 strerror(errno));                 \
+                exit(EXIT_FAILURE);               \
     }
 
 typedef struct

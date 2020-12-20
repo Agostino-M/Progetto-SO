@@ -28,7 +28,6 @@ int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
     int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request;
-
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
@@ -50,7 +49,7 @@ int main(int argc, char const *argv[])
     id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
 
-    /* creazione semaforo  richieste */
+    /* Creazione semaforo  richieste */
     id_sem_request = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
     for (i = 0; i < NUM_RISORSE; i++)
@@ -59,7 +58,7 @@ int main(int argc, char const *argv[])
         TEST_ERROR
     }
 
-    /* creazione semaforo "wait for zero" taxi */
+    /* Creazione semaforo "wait for zero" taxi */
     id_sem_taxi = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
     set_sem(id_sem_taxi, 0, 1);
@@ -89,6 +88,9 @@ int main(int argc, char const *argv[])
     fill_resource();
     print_resource(id_sem_cap);
 
+    printf("Premi INVIO per continuare.\n");
+    getchar();
+    printf("-----------------Creazione Richieste-----------------\n");
     /* Creazione richieste */
     for (i = 0; i < SO_SOURCES; i++)
     {
@@ -136,7 +138,7 @@ int main(int argc, char const *argv[])
             request.start.y = random_y_p;
             request.end.x = random_x_a;
             request.end.y = random_y_a;
-            printf("Source PID:%d: Nuova richiesta creata: \n"
+            printf("Source PID:%d : Nuova richiesta creata: \n"
                    "- Partenza x : %d\n"
                    "- Partenza y : %d \n"
                    "- Arrivo x : %d \n"
@@ -155,6 +157,13 @@ int main(int argc, char const *argv[])
         }
     }
 
+    while (wait(NULL) != -1)
+        ;
+    errno = 0;
+
+    printf("Premi INVIO per continuare.\n");
+    getchar();
+    printf("-----------------Creazione Taxi-----------------\n");
     /* Creazione taxi */
     for (i = 0; i < SO_TAXI; i++)
     {
@@ -166,17 +175,21 @@ int main(int argc, char const *argv[])
 
         case 0:
         {
-            /* 
-            * Argomenti args
-            * - argv[1] = id memoria condivisa
-            * - argv[2] = id coda di messaggi per le richieste
-            * - argv[3] = id semaforo delle capacità massime per taxi su una cella
-            * - argv[4] = id semaforo "wait for zero" che dà il via ai taxi
-            * - argv[5] = id semaforo che indica la presenza di una richiesta
-            */
-            execlp(FILEPATH, "" + id_shd_mem, "" + id_msg_queue, "" + id_sem_cap, "" + id_sem_request, "" + id_sem_taxi, NULL);
+            char sid_shd_mem[20],
+                sid_msg_queue[20],
+                sid_sem_cap[20],
+                sid_sem_taxi[20],
+                sid_sem_request[20];
 
-            /*execve(FILEPATH, args, NULL);*/
+            snprintf(sid_shd_mem, 20, "%d", id_shd_mem);
+            snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
+            snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
+            snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
+            snprintf(sid_sem_request, 20, "%d", id_sem_request);
+
+            execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_msg_queue, sid_sem_cap, sid_sem_taxi, sid_sem_request, NULL);
+            TEST_ERROR
+
             exit(EXIT_FAILURE);
         }
         default:
@@ -184,15 +197,23 @@ int main(int argc, char const *argv[])
         }
     }
 
+    sleep(2);
+    printf("Premi INVIO per continuare.\n");
+    getchar();
+    printf("-----------------Inizio Gioco-----------------\n");
+
     /* Semaforo wait for zero */
+    printf("Master PID:%d : Rilascio il semaforo per i taxi...\n", getpid());
     set_sem(id_sem_taxi, 0, 0);
     TEST_ERROR
 
     /* Parte il timer SO_DURATION */
+    printf("Master PID:%d : Timer gioco partito - %d sec.\n", getpid(), SO_DURATION);
     alarm(SO_DURATION);
 
     /* attesa figli? */
-    sleep(10);
+    sleep(18);
+    printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 
     /* Detaching ed eliminazione memoria condivisa */
     shmdt(city);
@@ -204,12 +225,15 @@ int main(int argc, char const *argv[])
     TEST_ERROR
     semctl(id_sem_taxi, 0, IPC_RMID);
     TEST_ERROR
+    semctl(id_sem_request, 0, IPC_RMID);
+    TEST_ERROR
 
     /* Chiusura coda di messaggi */
     msgctl(id_msg_queue, IPC_RMID, NULL);
     TEST_ERROR
 
-    return 0;
+    printf("Master PID:%d : Terminazione completata.\n", getpid());
+    return 10;
 }
 
 int create_matrix()
@@ -272,7 +296,7 @@ int create_matrix()
             if (attempts > 30)
                 return -1; /* Fallimento */
 
-            continue; /*SERVE ??????*/
+            /* continue; */
         }
     }
     return 0;

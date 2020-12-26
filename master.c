@@ -107,59 +107,61 @@ int main(int argc, char const *argv[])
             sigaction(SIGALRM, &sa, NULL);
 
             srand(getpid());
-            random_request = rand() % 5 + 1;
-            alarm(random_request);
 
-            sigemptyset(&my_mask);
-            sigfillset(&my_mask);
-            sigdelset(&my_mask, SIGALRM);
-            sigsuspend(&my_mask);
-            errno = 0;
-
-            /* Estraggo coordinate partenza */
-            do
+            while (1)
             {
-                random_x_p = rand() % SO_HEIGHT;
-                random_y_p = rand() % SO_WIDTH;
-            } while (city->matrix[random_x_p][random_y_p].is_hole && city->matrix[random_x_p][random_y_p].request_pid != 0);
+                random_request = rand() % 5 + 1;
+                alarm(random_request);
 
-            city->matrix[random_x_p][random_y_p].request_pid = getpid();
+                sigemptyset(&my_mask);
+                sigfillset(&my_mask);
+                sigdelset(&my_mask, SIGALRM);
+                sigsuspend(&my_mask);
+                errno = 0;
 
-            /* Estraggo coordinate arrivo */
-            do
-            {
-                random_x_a = rand() % SO_HEIGHT;
-                random_y_a = rand() % SO_WIDTH;
-            } while (city->matrix[random_x_a][random_y_a].is_hole && random_x_a == random_x_p && random_y_a == random_y_p);
+                /* Estraggo coordinate partenza */
+                do
+                {
+                    random_x_p = rand() % SO_HEIGHT;
+                    random_y_p = rand() % SO_WIDTH;
+                } while (city->matrix[random_x_p][random_y_p].is_hole && city->matrix[random_x_p][random_y_p].request_pid != 0);
 
-            /* Write del messaggio sulla coda */
-            request.mtype = (long)getpid();
-            request.start.x = random_x_p;
-            request.start.y = random_y_p;
-            request.end.x = random_x_a;
-            request.end.y = random_y_a;
-            printf("Source PID:%d : Nuova richiesta creata: \n"
-                   "- Partenza x : %d\n"
-                   "- Partenza y : %d \n"
-                   "- Arrivo x : %d \n"
-                   "- Arrivo y : %d\n",
-                   getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
+                city->matrix[random_x_p][random_y_p].request_pid = getpid();
 
-            msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
-            TEST_ERROR
+                /* Estraggo coordinate arrivo */
+                do
+                {
+                    random_x_a = rand() % SO_HEIGHT;
+                    random_y_a = rand() % SO_WIDTH;
+                } while (city->matrix[random_x_a][random_y_a].is_hole && random_x_a == random_x_p && random_y_a == random_y_p);
 
-            rel_sem(id_sem_request, INDEX(request.start.x, request.start.y));
+                /* Write del messaggio sulla coda */
+                request.mtype = (long)getpid();
+                request.start.x = random_x_p;
+                request.start.y = random_y_p;
+                request.end.x = random_x_a;
+                request.end.y = random_y_a;
+                printf("Source PID:%d : Nuova richiesta creata: \n"
+                       "- Partenza x : %d\n"
+                       "- Partenza y : %d \n"
+                       "- Arrivo x : %d \n"
+                       "- Arrivo y : %d\n",
+                       getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
 
-            exit(EXIT_SUCCESS);
+                msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
+                TEST_ERROR
+
+                rel_sem(id_sem_request, INDEX(request.start.x, request.start.y));
+
+                wait_sem_zero(id_sem_request, INDEX(request.start.x, request.start.y));
+            }
+
+            exit(EXIT_FAILURE);
 
         default:
             break;
         }
     }
-
-    while (wait(NULL) != -1)
-        ;
-    errno = 0;
 
     printf("Premi INVIO per continuare.\n");
     getchar();

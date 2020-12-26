@@ -50,7 +50,7 @@ void dec_sem(int sem_id, int index);
  * - Se la risorsa non è disponibile (valore semaforo = 0), il
  *   processo termina con errno = EAGAIN.
  */
-void dec_sem_nw(int sem_id, int index);
+int dec_sem_nw(int sem_id, int index);
 
 /*
  * Rilascia la risorsa

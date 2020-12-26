@@ -26,6 +26,8 @@ int main(int argc, char const *argv[])
     /* Dichiarazione variabili */
     struct msg_request request;
     struct sigaction sa;
+    coordinate source_position;
+    int i, j;
 
     /* Controllo dei parametri ricevuti */
     if (argc != 6)
@@ -67,10 +69,105 @@ int main(int argc, char const *argv[])
     wait_sem_zero(id_sem_taxi, 0);
 
     /* Prelievo richieste con coda */
-    printf("Taxi PID:%d : Attendo una richiesta...\n", getpid());
-    dec_sem(id_sem_request, INDEX(actual_position.x, actual_position.y));
+    printf("Taxi PID:%d : Prenoto una richiesta...\n", getpid());
 
-    msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[actual_position.x][actual_position.y].request_pid, 0);
+    /*Verifica se la richiesta si trova nella cella attuale*/
+    if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y)) != -1)
+    {
+        source_position.x = actual_position.x;
+        source_position.y = actual_position.y;
+    }
+    else if (errno == EAGAIN)
+    {
+        
+        /*Controlla nelle celle adiacenti*/
+        for (i = 1; i < SO_HEIGHT; i++) /* da ottimizzare ? */
+        {
+            for (j = 1; i < SO_WIDTH; i++) /* da ottimizzare ? */
+            {
+
+                /* cella adiacente in alto a sx [x-i, y-i]*/
+                if (actual_position.x - i > 0 && actual_position.y - i > 0)
+                    if (city->matrix[actual_position.x - i][actual_position.y - i].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x - i, actual_position.y - i)) != -1)
+                        {
+                            source_position.x = actual_position.x - i;
+                            source_position.y = actual_position.y - i;
+                            break;
+                        }
+
+                /* cella adiacente in alto [x-i, y]*/
+                if (actual_position.x - i > 0 && actual_position.y > 0)
+                    if (city->matrix[actual_position.x - i][actual_position.y].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x - i, actual_position.y)) != -1)
+                        {
+                            source_position.x = actual_position.x - i;
+                            source_position.y = actual_position.y;
+                            break;
+                        }
+                /* cella adiacente in alto a dx [x-i, y+i]*/
+                if (actual_position.x - i > 0 && actual_position.y + i > 0)
+                    if (city->matrix[actual_position.x - i][actual_position.y + i].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x - i, actual_position.y + i)) != -1)
+                        {
+                            source_position.x = actual_position.x - i;
+                            source_position.y = actual_position.y + i;
+                            break;
+                        }
+                /* cella adiacente a sx [x, y-i]*/
+                if (actual_position.x > 0 && actual_position.y - i > 0)
+                    if (city->matrix[actual_position.x][actual_position.y - i].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y - i)) != -1)
+                        {
+                            source_position.x = actual_position.x;
+                            source_position.y = actual_position.y - i;
+                            break;
+                        }
+                /* cella attuale [x,y]*/
+
+                /* cella adiacente a dx [x, y+i]*/
+                if (actual_position.x > 0 && actual_position.y + i > 0)
+                    if (city->matrix[actual_position.x][actual_position.y + i].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y + i)) != -1)
+                        {
+                            source_position.x = actual_position.x;
+                            source_position.y = actual_position.y + i;
+                            break;
+                        }
+                /* cella adiacente in basso a sx [x+i, y-i]*/
+                if (actual_position.x + i > 0 && actual_position.y - i > 0)
+                    if (city->matrix[actual_position.x + i][actual_position.y - i].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y - i)) != -1)
+                        {
+                            source_position.x = actual_position.x + i;
+                            source_position.y = actual_position.y - i;
+                            break;
+                        }
+                /* cella adiacente in basso [x+i, y]*/
+                if (actual_position.x + i > 0 && actual_position.y > 0)
+                    if (city->matrix[actual_position.x + i][actual_position.y].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y)) != -1)
+                        {
+                            source_position.x = actual_position.x + i;
+                            source_position.y = actual_position.y;
+                            break;
+                        }
+                /* cella adiacente in basso a dx [x+i, y+i]*/
+                if (actual_position.x + i > 0 && actual_position.y + i > 0)
+                    if (city->matrix[actual_position.x + i][actual_position.y + i].is_hole == 0)
+                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y + i)) != -1)
+                        {
+                            source_position.x = actual_position.x + i;
+                            source_position.y = actual_position.y + i;
+                            break;
+                        }
+            }
+        }
+
+        //if( )
+    }
+
+    msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[source_position.x][source_position.y].request_pid, 0);
     TEST_ERROR
     printf("Taxi PID:%d : Richiesta trovata: \n"
            "- Partenza x : %d\n"

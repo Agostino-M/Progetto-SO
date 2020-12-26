@@ -20,7 +20,9 @@
 #define SO_WIDTH 20
 #define SO_HEIGHT 10
 #define NUM_RISORSE SO_WIDTH *SO_HEIGHT
+#define QUARTIERE 3
 #define INDEX(x, y) (y * SO_WIDTH) + x
+
 
 #define TEST_ERROR                                \
     if (errno)                                    \

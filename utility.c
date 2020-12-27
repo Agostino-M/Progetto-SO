@@ -23,7 +23,7 @@ void print_matrix(struct shared_map *mat, int field)
 {
     int i, j;
 
-    if (field != 1 && field != 2 && field != 3 && field != 4)
+    if (field != 1 && field != 2 && field != 3 && field != 4 && field != 5)
     {
         fprintf(stderr, "Stampa: errore nel parametro field\n");
         return;

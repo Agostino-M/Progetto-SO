@@ -162,7 +162,7 @@ int main(int argc, char const *argv[])
             break;
         }
     }
-    sleep(2);
+    sleep(25);
     print_matrix(city, 5);
 
     getchar();

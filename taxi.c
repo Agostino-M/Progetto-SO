@@ -27,7 +27,7 @@ int main(int argc, char const *argv[])
     struct msg_request request;
     struct sigaction sa;
     coordinate source_position;
-    int iter, i, j, a, b;
+    int iter, i, j, a, b, found;
 
     /* Controllo dei parametri ricevuti */
     if (argc != 6)
@@ -82,40 +82,50 @@ int main(int argc, char const *argv[])
         }
         else if (errno == EAGAIN)
         {
+            errno = 0;
 
             /* Controlla nelle celle adiacenti */
-            for (iter = 1; iter < QUARTIERE; iter++)
+            found = 0;
+            for (iter = 1; iter < QUARTIERE && !found; iter++)
             {
                 a = -iter;
                 b = iter;
 
-                for (i = a; i <= b; i++)
+                for (i = a; i <= b && !found; i++)
                 {
-                    for (j = a; j <= b; j++)
+                    for (j = a; j <= b && !found; j++)
                     {
                         if (i == a || i == b || j == a || j == b)
                         {
-                            if (city->matrix[actual_position.x + i][actual_position.y + j].is_hole == 0)
-                                if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y + j)) != -1)
-                                {
-                                    source_position.x = actual_position.x + i;
-                                    source_position.y = actual_position.y + j;
-                                    printf("Taxi : Richiesta trovata nel punto più vicino (%d, %d)", source_position.x, source_position.y);
-
-                                    break;
-                                }
+                            if (actual_position.x + i >= 0 && actual_position.y + j >= 0 && actual_position.x + i < SO_HEIGHT && actual_position.y + j < SO_WIDTH)
+                                if (city->matrix[actual_position.x + i][actual_position.y + j].is_hole == 0)
+                                    if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y + j)) != -1)
+                                    {
+                                        source_position.x = actual_position.x + i;
+                                        source_position.y = actual_position.y + j;
+                                        printf("Taxi : Richiesta trovata nel punto più vicino (%d, %d)\n", source_position.x, source_position.y);
+                                        found = 1;
+                                        printf("[%d, %d]\n", i, j);
+                                    }
+                                    else
+                                    {
+                                        errno = 0;
+                                    }
                         }
                     }
                 }
             }
+
+            if (!found)
+            {
+                sleep(2); /* attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
+                continue;
+            }
         }
 
+        TEST_ERROR
         msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[source_position.x][source_position.y].request_pid, 0);
-        if (errno == EAGAIN)
-        {
-            continue;
-            errno = 0;
-        }
+        TEST_ERROR;
 
         printf("Taxi PID:%d : Richiesta trovata: \n"
                "- Partenza x : %d\n"
@@ -202,7 +212,8 @@ int move()
     /* usare move_up/down/left/right per arrivare alla destinazione :) 
      * https://rosettacode.org/wiki/A*_search_algorithm#C
      */
-    sleep(10);
+
+    sleep(1);
     doing_request = 0; /* richiesta completata */
 }
 

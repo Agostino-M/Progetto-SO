@@ -21,7 +21,7 @@
 #define SO_HEIGHT 10
 #define NUM_RISORSE SO_WIDTH *SO_HEIGHT
 #define QUARTIERE 3
-#define INDEX(x, y) (y * SO_WIDTH) + x
+#define INDEX(x, y) (x * SO_WIDTH) + y
 
 
 #define TEST_ERROR                                \

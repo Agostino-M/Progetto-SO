@@ -103,7 +103,7 @@ int main(int argc, char const *argv[])
                                     {
                                         source_position.x = actual_position.x + i;
                                         source_position.y = actual_position.y + j;
-                                        printf("Taxi : Richiesta trovata nel punto più vicino (%d, %d)\n", source_position.x, source_position.y);
+                                        printf("Taxi : Richiesta trovata nel punto più vicino (%d, %d) con PID %d: \n", source_position.x, source_position.y, city->matrix[source_position.x][source_position.y].request_pid);
                                         found = 1;
                                         printf("[%d, %d]\n", i, j);
                                     }
@@ -122,7 +122,7 @@ int main(int argc, char const *argv[])
                 continue;
             }
         }
-
+        errno = 0;
         TEST_ERROR
         msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[source_position.x][source_position.y].request_pid, 0);
         TEST_ERROR;

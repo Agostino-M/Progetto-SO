@@ -83,6 +83,7 @@ int main(int argc, char const *argv[])
     }
 
     print_matrix(city, 3);
+    print_resource(id_sem_request);
 
     /* Inizializzazione del vettore di semafori */
     fill_resource();
@@ -101,6 +102,9 @@ int main(int argc, char const *argv[])
             break;
 
         case 0:
+        {
+            struct sembuf sops[2];
+
             /* Creazione signal header */
             bzero(&sa, sizeof(struct sigaction));
             sa.sa_handler = request_handler;
@@ -151,18 +155,29 @@ int main(int argc, char const *argv[])
                 msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
                 TEST_ERROR
 
-                rel_sem(id_sem_request, INDEX(request.start.x, request.start.y));
+                /*rel_sem(id_sem_request, INDEX(request.start.x, request.start.y));*/
 
-                wait_sem_zero(id_sem_request, INDEX(request.start.x, request.start.y));
+                /*wait_sem_zero(id_sem_request, INDEX(request.start.x, request.start.y));*/
+
+                sops[0].sem_num = INDEX(request.start.x, request.start.y);
+                sops[0].sem_op = 1;
+                sops[0].sem_flg = 0;
+
+                sops[1].sem_num = INDEX(request.start.x, request.start.y);
+                sops[1].sem_op = 0;
+                sops[1].sem_flg = 0;
+                semop(id_sem_request, sops, 2);
+                TEST_ERROR
             }
 
             exit(EXIT_FAILURE);
-
+        }
         default:
             break;
         }
     }
     sleep(25);
+    print_resource(id_sem_request);
     print_matrix(city, 5);
 
     getchar();

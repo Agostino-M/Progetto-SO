@@ -82,7 +82,7 @@ void print_resource(int id_sem);
  * Stampa la matrice del campo indicato
  * INPUT:
  * - mat: puntatore alla strutta shared_map
- * - campo: indice del campo ( 1 = crossing_time ; 2 = crossing_cont ; 3 = is_hole ; 4 = nmax_taxi ) 
+ * - campo: indice del campo (1: crossing_time; 2: crossing_cont; 3: is_hole; 4: nmax_taxi; 5: request_pid) 
 */
 void print_matrix(struct shared_map *mat, int field);
 

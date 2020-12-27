@@ -27,7 +27,7 @@ int main(int argc, char const *argv[])
     struct msg_request request;
     struct sigaction sa;
     coordinate source_position;
-    int i, j;
+    int iter, i, j, a, b;
 
     /* Controllo dei parametri ricevuti */
     if (argc != 6)
@@ -68,120 +68,69 @@ int main(int argc, char const *argv[])
     /* Semaforo wait for zero */
     wait_sem_zero(id_sem_taxi, 0);
 
-    /* Prelievo richieste con coda */
-    printf("Taxi PID:%d : Prenoto una richiesta...\n", getpid());
+    while (1)
+    {
+        /* Prelievo richieste con coda */
+        printf("Taxi PID:%d : Cerco una richiesta...\n", getpid());
 
-    /*Verifica se la richiesta si trova nella cella attuale*/
-    if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y)) != -1)
-    {
-        source_position.x = actual_position.x;
-        source_position.y = actual_position.y;
-    }
-    else if (errno == EAGAIN)
-    {
-        
-        /*Controlla nelle celle adiacenti*/
-        for (i = 1; i < SO_HEIGHT; i++) /* da ottimizzare ? */
+        /* Verifica se la richiesta si trova nella cella attuale */
+        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y)) != -1)
         {
-            for (j = 1; i < SO_WIDTH; i++) /* da ottimizzare ? */
+            printf("Taxi : Richiesta trovata nel punto di origine\n");
+            source_position.x = actual_position.x;
+            source_position.y = actual_position.y;
+        }
+        else if (errno == EAGAIN)
+        {
+
+            /* Controlla nelle celle adiacenti */
+            for (iter = 1; iter < QUARTIERE; iter++)
             {
+                a = -iter;
+                b = iter;
 
-                /* cella adiacente in alto a sx [x-i, y-i]*/
-                if (actual_position.x - i > 0 && actual_position.y - i > 0)
-                    if (city->matrix[actual_position.x - i][actual_position.y - i].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x - i, actual_position.y - i)) != -1)
+                for (i = a; i <= b; i++)
+                {
+                    for (j = a; j <= b; j++)
+                    {
+                        if (i == a || i == b || j == a || j == b)
                         {
-                            source_position.x = actual_position.x - i;
-                            source_position.y = actual_position.y - i;
-                            break;
-                        }
+                            if (city->matrix[actual_position.x + i][actual_position.y + j].is_hole == 0)
+                                if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y + j)) != -1)
+                                {
+                                    source_position.x = actual_position.x + i;
+                                    source_position.y = actual_position.y + j;
+                                    printf("Taxi : Richiesta trovata nel punto più vicino (%d, %d)", source_position.x, source_position.y);
 
-                /* cella adiacente in alto [x-i, y]*/
-                if (actual_position.x - i > 0 && actual_position.y > 0)
-                    if (city->matrix[actual_position.x - i][actual_position.y].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x - i, actual_position.y)) != -1)
-                        {
-                            source_position.x = actual_position.x - i;
-                            source_position.y = actual_position.y;
-                            break;
+                                    break;
+                                }
                         }
-                /* cella adiacente in alto a dx [x-i, y+i]*/
-                if (actual_position.x - i > 0 && actual_position.y + i > 0)
-                    if (city->matrix[actual_position.x - i][actual_position.y + i].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x - i, actual_position.y + i)) != -1)
-                        {
-                            source_position.x = actual_position.x - i;
-                            source_position.y = actual_position.y + i;
-                            break;
-                        }
-                /* cella adiacente a sx [x, y-i]*/
-                if (actual_position.x > 0 && actual_position.y - i > 0)
-                    if (city->matrix[actual_position.x][actual_position.y - i].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y - i)) != -1)
-                        {
-                            source_position.x = actual_position.x;
-                            source_position.y = actual_position.y - i;
-                            break;
-                        }
-                /* cella attuale [x,y]*/
-
-                /* cella adiacente a dx [x, y+i]*/
-                if (actual_position.x > 0 && actual_position.y + i > 0)
-                    if (city->matrix[actual_position.x][actual_position.y + i].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y + i)) != -1)
-                        {
-                            source_position.x = actual_position.x;
-                            source_position.y = actual_position.y + i;
-                            break;
-                        }
-                /* cella adiacente in basso a sx [x+i, y-i]*/
-                if (actual_position.x + i > 0 && actual_position.y - i > 0)
-                    if (city->matrix[actual_position.x + i][actual_position.y - i].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y - i)) != -1)
-                        {
-                            source_position.x = actual_position.x + i;
-                            source_position.y = actual_position.y - i;
-                            break;
-                        }
-                /* cella adiacente in basso [x+i, y]*/
-                if (actual_position.x + i > 0 && actual_position.y > 0)
-                    if (city->matrix[actual_position.x + i][actual_position.y].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y)) != -1)
-                        {
-                            source_position.x = actual_position.x + i;
-                            source_position.y = actual_position.y;
-                            break;
-                        }
-                /* cella adiacente in basso a dx [x+i, y+i]*/
-                if (actual_position.x + i > 0 && actual_position.y + i > 0)
-                    if (city->matrix[actual_position.x + i][actual_position.y + i].is_hole == 0)
-                        if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y + i)) != -1)
-                        {
-                            source_position.x = actual_position.x + i;
-                            source_position.y = actual_position.y + i;
-                            break;
-                        }
+                    }
+                }
             }
         }
 
-        //if( )
+        msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[source_position.x][source_position.y].request_pid, 0);
+        if (errno == EAGAIN)
+        {
+            continue;
+            errno = 0;
+        }
+
+        printf("Taxi PID:%d : Richiesta trovata: \n"
+               "- Partenza x : %d\n"
+               "- Partenza y : %d \n"
+               "- Arrivo x : %d \n"
+               "- Arrivo y : %d\n",
+               getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
+        doing_request = 1;
+
+        /* Parte il timer SO_TIMEOUT */
+        alarm(10); /* SO_TIMEOUT */
+
+        /* Spostamento */
+        move();
     }
-
-    msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[source_position.x][source_position.y].request_pid, 0);
-    TEST_ERROR
-    printf("Taxi PID:%d : Richiesta trovata: \n"
-           "- Partenza x : %d\n"
-           "- Partenza y : %d \n"
-           "- Arrivo x : %d \n"
-           "- Arrivo y : %d\n",
-           getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
-    doing_request = 1;
-
-    /* Parte il timer SO_TIMEOUT */
-    alarm(10); /* SO_TIMEOUT */
-
-    /* Spostamento */
-    move();
 
     /* Detaching memoria condivisa */
     shmdt(city);

@@ -162,12 +162,13 @@ int main(int argc, char const *argv[])
             break;
         }
     }
+    sleep(2);
+    print_matrix(city, 5);
 
-    printf("Premi INVIO per continuare.\n");
     getchar();
     printf("-----------------Creazione Taxi-----------------\n");
     /* Creazione taxi */
-    for (i = 0; i < SO_TAXI; i++)
+    for (i = 0; i < 1; i++)
     {
         switch (fork())
         {

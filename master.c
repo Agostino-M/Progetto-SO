@@ -135,6 +135,7 @@ int main(int argc, char const *argv[])
 
                 do
                 {
+                    errno = 0;
                     random_x_p = rand() % SO_HEIGHT;
                     random_y_p = rand() % SO_WIDTH;
 
@@ -200,7 +201,7 @@ int main(int argc, char const *argv[])
             break;
         }
     }
-    sleep(25);
+    sleep(18);
     printf("\n\n");
     print_resource(id_sem_request);
     print_resource(id_sem_write);
@@ -209,7 +210,7 @@ int main(int argc, char const *argv[])
     getchar();
     printf("-----------------Creazione Taxi-----------------\n");
     /* Creazione taxi */
-    for (i = 0; i < 1; i++)
+    for (i = 0; i < 5; i++)
     {
         switch (fork())
         {
@@ -254,9 +255,10 @@ int main(int argc, char const *argv[])
     /* Parte il timer SO_DURATION */
     printf("Master PID:%d : Timer gioco partito - %d sec.\n", getpid(), SO_DURATION);
     alarm(SO_DURATION);
-
+    
     /* attesa figli? */
     sleep(18);
+    print_resource(id_sem_request);
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 
     /* Detaching ed eliminazione memoria condivisa */

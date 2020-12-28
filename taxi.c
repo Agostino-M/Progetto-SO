@@ -86,7 +86,7 @@ int main(int argc, char const *argv[])
 
             /* Controlla nelle celle adiacenti */
             found = 0;
-            for (iter = 1; iter < QUARTIERE && !found; iter++)
+            for (iter = 1; iter <= QUARTIERE && !found; iter++)
             {
                 a = -iter;
                 b = iter;
@@ -99,18 +99,20 @@ int main(int argc, char const *argv[])
                         {
                             if (actual_position.x + i >= 0 && actual_position.y + j >= 0 && actual_position.x + i < SO_HEIGHT && actual_position.y + j < SO_WIDTH)
                                 if (city->matrix[actual_position.x + i][actual_position.y + j].is_hole == 0)
+                                {
                                     if (dec_sem_nw(id_sem_request, INDEX(actual_position.x + i, actual_position.y + j)) != -1)
                                     {
+
                                         source_position.x = actual_position.x + i;
                                         source_position.y = actual_position.y + j;
-                                        printf("Taxi : Richiesta trovata nel punto più vicino (%d, %d) con PID %d: \n", source_position.x, source_position.y, city->matrix[source_position.x][source_position.y].request_pid);
+                                        printf("Taxi PID : %d  Richiesta trovata nel punto più vicino (%d, %d) con PID %d: \n", getpid(), source_position.x, source_position.y, city->matrix[source_position.x][source_position.y].request_pid);
                                         found = 1;
-                                        printf("[%d, %d]\n", i, j);
                                     }
                                     else
                                     {
                                         errno = 0;
                                     }
+                                }
                         }
                     }
                 }
@@ -118,7 +120,7 @@ int main(int argc, char const *argv[])
 
             if (!found)
             {
-                sleep(2); /* attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
+                sleep(3); /* attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
                 continue;
             }
         }
@@ -158,6 +160,7 @@ int create_taxi()
 
     do
     {
+        errno = 0;
         random_x = rand() % SO_HEIGHT;
         random_y = rand() % SO_WIDTH;
 

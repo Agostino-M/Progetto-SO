@@ -20,7 +20,7 @@ unsigned int SO_DURATION = 20;
 int request_flag = 0;
 
 /* ID dell'IPC del semaforo e` globale */
-int id_sem_cap, id_sem_taxi, id_sem_request;
+int id_sem_cap, id_sem_taxi, id_sem_request, id_sem_write;
 
 struct shared_map *city;
 
@@ -48,6 +48,15 @@ int main(int argc, char const *argv[])
     /* Creazione array semafori capienza */
     id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
+
+    /* Creazione semaforo scrittura su coda mutex*/
+    id_sem_write = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
+    TEST_ERROR
+    for (i = 0; i < NUM_RISORSE; i++)
+    {
+        set_sem(id_sem_write, i, 1);
+        TEST_ERROR
+    }
 
     /* Creazione semaforo  richieste */
     id_sem_request = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
@@ -84,6 +93,7 @@ int main(int argc, char const *argv[])
 
     print_matrix(city, 3);
     print_resource(id_sem_request);
+    print_resource(id_sem_write);
 
     /* Inizializzazione del vettore di semafori */
     fill_resource();
@@ -123,12 +133,17 @@ int main(int argc, char const *argv[])
                 sigsuspend(&my_mask);
                 errno = 0;
 
-                /* Estraggo coordinate partenza */
                 do
                 {
                     random_x_p = rand() % SO_HEIGHT;
                     random_y_p = rand() % SO_WIDTH;
-                } while (city->matrix[random_x_p][random_y_p].is_hole && city->matrix[random_x_p][random_y_p].request_pid != 0);
+
+                    if (!city->matrix[random_x_p][random_y_p].is_hole)
+                    {
+                        dec_sem_nw(id_sem_write, INDEX(random_x_p, random_y_p));
+                    }
+            
+                } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole);
 
                 city->matrix[random_x_p][random_y_p].request_pid = getpid();
 
@@ -152,14 +167,22 @@ int main(int argc, char const *argv[])
                        "- Arrivo y : %d\n",
                        getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
 
+                /* Semaforo di mutua esclusione per la scrittura su coda */
+
                 msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
                 TEST_ERROR
 
-                /*rel_sem(id_sem_request, INDEX(request.start.x, request.start.y));*/
+                rel_sem(id_sem_request, INDEX(request.start.x, request.start.y));
+                TEST_ERROR
 
-                /*wait_sem_zero(id_sem_request, INDEX(request.start.x, request.start.y));*/
+                wait_sem_zero(id_sem_request, INDEX(request.start.x, request.start.y));
+                TEST_ERROR
 
-                sops[0].sem_num = INDEX(request.start.x, request.start.y);
+                /*Fine sezione critica*/
+                rel_sem(id_sem_write, INDEX(request.start.x, request.start.y));
+                TEST_ERROR
+
+                /*sops[0].sem_num = INDEX(request.start.x, request.start.y);
                 sops[0].sem_op = 1;
                 sops[0].sem_flg = 0;
 
@@ -168,6 +191,7 @@ int main(int argc, char const *argv[])
                 sops[1].sem_flg = 0;
                 semop(id_sem_request, sops, 2);
                 TEST_ERROR
+                */
             }
 
             exit(EXIT_FAILURE);
@@ -177,7 +201,9 @@ int main(int argc, char const *argv[])
         }
     }
     sleep(25);
+    printf("\n\n");
     print_resource(id_sem_request);
+    print_resource(id_sem_write);
     print_matrix(city, 5);
 
     getchar();
@@ -244,6 +270,8 @@ int main(int argc, char const *argv[])
     semctl(id_sem_taxi, 0, IPC_RMID);
     TEST_ERROR
     semctl(id_sem_request, 0, IPC_RMID);
+    TEST_ERROR
+    semctl(id_sem_write, 0, IPC_RMID);
     TEST_ERROR
 
     /* Chiusura coda di messaggi */

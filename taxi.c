@@ -54,6 +54,7 @@ int main(int argc, char const *argv[])
     bzero(&sa, sizeof(struct sigaction));
     sa.sa_handler = alarm_handler;
     sigaction(SIGALRM, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 
     /* Attacching memoria condivisa */
     city = shmat(id_shd_mem, NULL, 0);
@@ -207,6 +208,11 @@ void alarm_handler(int signum)
         shmdt(city);
         TEST_ERROR
         exit(EXIT_SUCCESS);
+    }
+
+    else if (signum == SIGTERM)
+    {
+        printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());
     }
 }
 

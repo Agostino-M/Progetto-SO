@@ -27,12 +27,13 @@ struct shared_map *city;
 int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
-    int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request;
+    int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
+    
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
 
-    /* Creazione signal header */
+    /* Creazione signal handler */
     bzero(&sa, sizeof(struct sigaction));
     sa.sa_handler = signal_handler;
     sigaction(SIGALRM, &sa, NULL);
@@ -102,10 +103,12 @@ int main(int argc, char const *argv[])
     printf("Premi INVIO per continuare.\n");
     getchar();
     printf("-----------------Creazione Richieste-----------------\n");
+
+
     /* Creazione richieste */
     for (i = 0; i < SO_SOURCES; i++)
     {
-        switch (fork())
+        switch (fork_value = fork())
         {
         case -1:
             TEST_ERROR
@@ -119,6 +122,7 @@ int main(int argc, char const *argv[])
             bzero(&sa, sizeof(struct sigaction));
             sa.sa_handler = request_handler;
             sigaction(SIGALRM, &sa, NULL);
+            sigaction(SIGTERM, &sa, NULL);
 
             srand(getpid());
 
@@ -143,7 +147,7 @@ int main(int argc, char const *argv[])
                     {
                         dec_sem_nw(id_sem_write, INDEX(random_x_p, random_y_p));
                     }
-            
+
                 } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole);
 
                 city->matrix[random_x_p][random_y_p].request_pid = getpid();
@@ -182,25 +186,16 @@ int main(int argc, char const *argv[])
                 /*Fine sezione critica*/
                 rel_sem(id_sem_write, INDEX(request.start.x, request.start.y));
                 TEST_ERROR
-
-                /*sops[0].sem_num = INDEX(request.start.x, request.start.y);
-                sops[0].sem_op = 1;
-                sops[0].sem_flg = 0;
-
-                sops[1].sem_num = INDEX(request.start.x, request.start.y);
-                sops[1].sem_op = 0;
-                sops[1].sem_flg = 0;
-                semop(id_sem_request, sops, 2);
-                TEST_ERROR
-                */
             }
 
             exit(EXIT_FAILURE);
         }
         default:
+            setpgid(fork_value, getpid());
             break;
         }
     }
+
     sleep(18);
     printf("\n\n");
     print_resource(id_sem_request);
@@ -212,12 +207,11 @@ int main(int argc, char const *argv[])
     /* Creazione taxi */
     for (i = 0; i < 5; i++)
     {
-        switch (fork())
+        switch (fork_value =  fork())
         {
         case -1:
             TEST_ERROR
             break;
-
         case 0:
         {
             char sid_shd_mem[20],
@@ -238,6 +232,7 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
         default:
+            setpgid(fork_value, getpid());
             break;
         }
     }
@@ -255,10 +250,18 @@ int main(int argc, char const *argv[])
     /* Parte il timer SO_DURATION */
     printf("Master PID:%d : Timer gioco partito - %d sec.\n", getpid(), SO_DURATION);
     alarm(SO_DURATION);
+
+    /* Stampa ogni secondo */
     
-    /* attesa figli? */
-    sleep(18);
+    /* Attesa segnale */
+    sigemptyset(&my_mask);
+    sigfillset(&my_mask);
+    sigdelset(&my_mask, SIGALRM);
+    sigsuspend(&my_mask);
+
+    /* Stampa finale */
     print_resource(id_sem_request);
+
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 
     /* Detaching ed eliminazione memoria condivisa */
@@ -281,7 +284,9 @@ int main(int argc, char const *argv[])
     TEST_ERROR
 
     printf("Master PID:%d : Terminazione completata.\n", getpid());
-    return 10;
+    setpgid(getpid(), getpid());
+    kill(0, SIGTERM);
+    return 0;
 }
 
 int create_matrix()

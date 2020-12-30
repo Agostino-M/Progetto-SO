@@ -246,6 +246,7 @@ int main(int argc, char const *argv[])
         }
         default:
             taxi[i] = fork_value;
+            TEST_ERROR
             setpgid(fork_value, taxi[0]);
             TEST_ERROR
             break;
@@ -281,12 +282,24 @@ int main(int argc, char const *argv[])
     }
     TEST_ERROR
 
-    /* Stampa finale */
-    print_resource(id_sem_request);
 
+
+    /* Terminazione figli */
     kill(-children[0], SIGTERM);
     kill(-taxi[0], SIGTERM);
 
+    /* Attesa terminazione figli */
+    while (wait(NULL) != -1)
+    {
+        
+    }
+
+    errno = 0;
+    
+    /* Stampa carattersitiche finali */
+    print_resource(id_sem_request);
+
+    /*Eliminazione IPC */
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 
     /* Detaching ed eliminazione memoria condivisa */

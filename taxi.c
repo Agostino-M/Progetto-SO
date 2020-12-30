@@ -9,6 +9,7 @@ int move_up(int x, int y);
 int move_down(int x, int y);
 int move_left(int x, int y);
 int move_right(int x, int y);
+void close_taxi();
 
 int id_shd_mem;
 int id_msg_queue;
@@ -145,10 +146,6 @@ int main(int argc, char const *argv[])
         move();
     }
 
-    /* Detaching memoria condivisa */
-    shmdt(city);
-    TEST_ERROR
-
     /* Fine */
     return 0;
 }
@@ -196,24 +193,32 @@ void alarm_handler(int signum)
         /* - gestire caso in cui stava gestendo una richiesta
          * - gestire rilascio di risorse (semafori)
          */
-        rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
-
-        if (doing_request)
-        {
-            /* si comunica che la richiesta è stata abortita */
-        }
-
-        /* Detaching memoria condivisa */
-        shmdt(city);
-        TEST_ERROR
+        close_taxi();
         exit(EXIT_SUCCESS);
     }
 
     else if (signum == SIGTERM)
     {
         printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());
+        close_taxi();
         exit(EXIT_SUCCESS);
     }
+}
+
+void close_taxi()
+{
+    TEST_ERROR
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+
+    if (doing_request)
+    {
+        /* si comunica che la richiesta è stata abortita  MEMORIA CONDIVISA? PIPE?*/
+    }
+
+    /* Detaching memoria condivisa */
+    TEST_ERROR
+    shmdt(city);
+    TEST_ERROR
 }
 
 int move()

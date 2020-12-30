@@ -190,7 +190,6 @@ int create_taxi()
 
 void alarm_handler(int signum)
 {
-    printf("I'm signal handler\n");
     if (signum == SIGALRM)
     {
         printf("Taxi PID:%d : Timer scaduto...\n", getpid());
@@ -213,6 +212,7 @@ void alarm_handler(int signum)
     else if (signum == SIGTERM)
     {
         printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());
+        exit(EXIT_SUCCESS);
     }
 }
 

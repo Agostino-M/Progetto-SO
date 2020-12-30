@@ -19,4 +19,12 @@ void request_handler(int signum)
     /* printf("Source PID:%d : segnale SIGALRM ricevuto\n", getpid()); */
 }
 
-
+void source_handler(int signum)
+{
+    switch (signum)
+    {
+        case SIGTERM:
+            printf("Source PID:%d SIGTERM rievuto...\n", getpid());
+            exit(EXIT_SUCCESS);
+    }
+}

@@ -7,5 +7,6 @@
 
 void signal_handler(int signum);
 void request_handler(int signum);
+void source_handler(int signum);
 
 #endif /* HANDLING_H */

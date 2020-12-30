@@ -28,7 +28,8 @@ int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
     int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
-    
+    pid_t *children;
+    pid_t *taxi;
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
@@ -104,6 +105,8 @@ int main(int argc, char const *argv[])
     getchar();
     printf("-----------------Creazione Richieste-----------------\n");
 
+    children = malloc(SO_SOURCES * sizeof(pid_t));
+    taxi = malloc(NUM_RISORSE * sizeof(pid_t));
 
     /* Creazione richieste */
     for (i = 0; i < SO_SOURCES; i++)
@@ -120,7 +123,7 @@ int main(int argc, char const *argv[])
 
             /* Creazione signal header */
             bzero(&sa, sizeof(struct sigaction));
-            sa.sa_handler = request_handler;
+            sa.sa_handler = source_handler;
             sigaction(SIGALRM, &sa, NULL);
             sigaction(SIGTERM, &sa, NULL);
 
@@ -134,8 +137,16 @@ int main(int argc, char const *argv[])
                 sigemptyset(&my_mask);
                 sigfillset(&my_mask);
                 sigdelset(&my_mask, SIGALRM);
+                sigdelset(&my_mask, SIGTERM);
+                sigdelset(&my_mask, SIGINT);
                 sigsuspend(&my_mask);
-                errno = 0;
+
+                /* Gestiamo il valore di ritorno EINTR */
+                if (errno == EINTR)
+                {
+                    errno = 0;
+                }
+                TEST_ERROR
 
                 do
                 {
@@ -191,12 +202,14 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
         default:
-            setpgid(fork_value, getpid());
+            children[i] = fork_value;
+            setpgid(fork_value, children[0]);
+            TEST_ERROR
             break;
         }
     }
 
-    sleep(18);
+    sleep(15);
     printf("\n\n");
     print_resource(id_sem_request);
     print_resource(id_sem_write);
@@ -207,7 +220,7 @@ int main(int argc, char const *argv[])
     /* Creazione taxi */
     for (i = 0; i < 5; i++)
     {
-        switch (fork_value =  fork())
+        switch (fork_value = fork())
         {
         case -1:
             TEST_ERROR
@@ -232,7 +245,9 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
         default:
-            setpgid(fork_value, getpid());
+            taxi[i] = fork_value;
+            setpgid(fork_value, taxi[0]);
+            TEST_ERROR
             break;
         }
     }
@@ -252,15 +267,25 @@ int main(int argc, char const *argv[])
     alarm(SO_DURATION);
 
     /* Stampa ogni secondo */
-    
+    TEST_ERROR
     /* Attesa segnale */
     sigemptyset(&my_mask);
     sigfillset(&my_mask);
     sigdelset(&my_mask, SIGALRM);
     sigsuspend(&my_mask);
 
+    /* Gestiamo il valore di ritorno EINTR */
+    if (errno == EINTR)
+    {
+        errno = 0;
+    }
+    TEST_ERROR
+
     /* Stampa finale */
     print_resource(id_sem_request);
+
+    kill(-children[0], SIGTERM);
+    kill(-taxi[0], SIGTERM);
 
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 
@@ -284,9 +309,7 @@ int main(int argc, char const *argv[])
     TEST_ERROR
 
     printf("Master PID:%d : Terminazione completata.\n", getpid());
-    setpgid(getpid(), getpid());
-    kill(0, SIGTERM);
-    return 0;
+    exit(EXIT_SUCCESS);
 }
 
 int create_matrix()

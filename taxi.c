@@ -82,9 +82,11 @@ int main(int argc, char const *argv[])
             source_position.x = actual_position.x;
             source_position.y = actual_position.y;
         }
-        else if (errno == EAGAIN)
+        else
         {
-            errno = 0;
+            if (errno == EAGAIN)
+                errno = 0;
+            TEST_ERROR
 
             /* Controlla nelle celle adiacenti */
             found = 0;
@@ -112,7 +114,9 @@ int main(int argc, char const *argv[])
                                     }
                                     else
                                     {
-                                        errno = 0;
+                                        if (errno == EAGAIN)
+                                            errno = 0;
+                                        TEST_ERROR
                                     }
                                 }
                         }
@@ -126,8 +130,7 @@ int main(int argc, char const *argv[])
                 continue;
             }
         }
-        errno = 0;
-        TEST_ERROR
+
         msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[source_position.x][source_position.y].request_pid, 0);
         TEST_ERROR;
 
@@ -158,7 +161,10 @@ int create_taxi()
 
     do
     {
-        errno = 0;
+        if (errno == EAGAIN)
+            errno = 0;
+        TEST_ERROR
+
         random_x = rand() % SO_HEIGHT;
         random_y = rand() % SO_WIDTH;
 
@@ -172,8 +178,6 @@ int create_taxi()
             return -1;
 
     } while (errno == EAGAIN || city->matrix[random_x][random_y].is_hole);
-
-    errno = 0;
 
     /* Aggiorno le posizioni attuali del taxi */
     actual_position.x = random_x;

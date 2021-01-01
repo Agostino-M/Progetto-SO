@@ -221,7 +221,7 @@ int main(int argc, char const *argv[])
 
     printf("---------------------Creazione Taxi---------------------\n");
     /* Creazione taxi */
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < 20; i++)
     {
         switch (fork_value = fork())
         {

@@ -1,10 +1,12 @@
 #include "sem_lib.h"
 #include "utility.h"
-#include "handling.h"
+/*#include "handling.h"/*
 
 /* Prototipi di funzioni */
 int create_matrix();
 void fill_resource();
+void signal_handler(int signum);
+void source_handler(int signum);
 
 /* Variabili globali */
 unsigned int SO_HOLES = 10;
@@ -17,11 +19,11 @@ unsigned long int SO_TIMENSEC_MIN = 100000000;
 unsigned long int SO_TIMENSEC_MAX = 300000000;
 unsigned int SO_TIMEOUT = 1;
 unsigned int SO_DURATION = 20;
-int request_flag = 0;
+
+int flag_timer = 0; /* flag dell'handler del master*/
 
 /* ID dell'IPC del semaforo e` globale */
 int id_sem_cap, id_sem_taxi, id_sem_request, id_sem_write;
-
 struct shared_map *city;
 
 int main(int argc, char const *argv[])
@@ -138,7 +140,6 @@ int main(int argc, char const *argv[])
                 sigfillset(&my_mask);
                 sigdelset(&my_mask, SIGALRM);
                 sigdelset(&my_mask, SIGTERM);
-                sigdelset(&my_mask, SIGINT);
                 sigsuspend(&my_mask);
 
                 /* Gestiamo il valore di ritorno EINTR */
@@ -271,19 +272,35 @@ int main(int argc, char const *argv[])
     alarm(SO_DURATION);
 
     /* Stampa ogni secondo */
-    TEST_ERROR
-    /* Attesa segnale */
-    sigemptyset(&my_mask);
-    sigfillset(&my_mask);
-    sigdelset(&my_mask, SIGALRM);
-    sigsuspend(&my_mask);
-
-    /* Gestiamo il valore di ritorno EINTR */
-    if (errno == EINTR)
+    while (flag_timer == 0)
     {
-        errno = 0;
+        /*
+         * Stampa stato occupazione celle:
+         * - Matrice pid taxi
+         * - Matrice pid richieste
+         * 
+         * e/o 
+         * 
+         * - Lista di taxi per ogni cella - esempio
+         *   TAXI PID:200 : [20,2]  TAXI PID:206 : [8,16]  TAXI PID:204 : [16,5]
+         *   TAXI PID:202 : [0,1]  TAXI PID:201 : [19,7]  TAXI PID:203: [18,13]
+         *   TAXI PID:205 : [3,12]  TAXI PID:209 : [5,0]  TAXI PID:207 : [0,15]
+         */
+        sleep(1);
     }
-    TEST_ERROR
+    printf("Master : Timer scaduto.. Il gioco termina.\n");
+
+    /*
+     * Invece di sospendere l'esecuzione in attesa che arrivi l'alarm, effettuiamo la stampa ogni secondo 
+     * 
+     * sigemptyset(&my_mask);
+     * sigfillset(&my_mask);
+     * sigdelset(&my_mask, SIGALRM);
+     * sigsuspend(&my_mask);
+     * if (errno == EINTR) /* Gestiamo il valore di ritorno EINTR 
+     * errno = 0;
+     * TEST_ERROR
+    /*
 
     /* Terminazione figli */
     kill(-children[0], SIGTERM);
@@ -302,10 +319,29 @@ int main(int argc, char const *argv[])
      * - la mappa con evidenziate le SO_SOURCES sorgenti e le SO_TOP_CELLS celle più attraversate
      * - il taxi che:
      *      1. ha fatto più strada (numero di celle) di tutti
-     *      2. ha fatto il viaffio più lungo come tempo
+     *      2. ha fatto il viaggio più lungo come tempo
      *      3. ha raccolto più richieste
      */
+    printf("Matrice con le richieste\n");
     print_resource(id_sem_request);
+    printf("SO_TOP_CELLS %d celle più attraversate", SO_TOP_CELLS);
+    /* matrice con solo le SO_TOP_CELLS celle più attraversate */
+    printf("Matrice con i taxi\n");
+    /* matrice che indica quanti taxi sono su ogni cella */
+
+    /* Prelievo viaggi inevase */
+    int viaggi_inevasi;
+    struct msqid_ds buff;
+    msgctl(id_msg_queue, IPC_STAT, &buff);
+    viaggi_inevasi = buff.msg_qnum;
+
+    /* viaggi eseguiti si trovano scritti sulla memoria condivisa */
+    /* viaggi abortiti si trovano scritti sulla memoria condivisa */
+
+    printf("Viaggi eseguiti : %d\n"
+           "Viaggi abortiti : %d\n"
+           "Viaggi inevasi : %d\n",
+           0, 0, viaggi_inevasi);
 
     /*Eliminazione IPC */
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
@@ -407,5 +443,28 @@ void fill_resource()
     {
         set_sem(id_sem_cap, i, rand() % SO_CAP_MAX + SO_CAP_MIN);
         TEST_ERROR
+    }
+}
+
+void signal_handler(int signum)
+{
+    switch (signum)
+    {
+    case SIGALRM:
+        flag_timer = 1;
+        break;
+    case SIGUSR1:
+        printf("Master : Segnale SIGUSR1 arrivato..\n");
+        /* Crea una richiesta a mano / Richiama una funzione */
+    }
+}
+
+void source_handler(int signum)
+{
+    switch (signum)
+    {
+    case SIGTERM:
+        printf("Source PID:%d SIGTERM rievuto...\n", getpid());
+        exit(EXIT_SUCCESS);
     }
 }

@@ -271,6 +271,18 @@ int main(int argc, char const *argv[])
     printf("Master PID:%d : Timer gioco partito - %d sec.\n", getpid(), SO_DURATION);
     alarm(SO_DURATION);
 
+    /*
+     * Invece di sospendere l'esecuzione in attesa che arrivi l'alarm, effettuiamo la stampa ogni secondo 
+     * 
+     * sigemptyset(&my_mask);
+     * sigfillset(&my_mask);
+     * sigdelset(&my_mask, SIGALRM);
+     * sigsuspend(&my_mask);
+     * if (errno == EINTR) /* Gestiamo il valore di ritorno EINTR 
+     * errno = 0;
+     * TEST_ERROR
+    /*
+
     /* Stampa ogni secondo */
     while (flag_timer == 0)
     {
@@ -289,18 +301,6 @@ int main(int argc, char const *argv[])
         sleep(1);
     }
     printf("Master : Timer scaduto.. Il gioco termina.\n");
-
-    /*
-     * Invece di sospendere l'esecuzione in attesa che arrivi l'alarm, effettuiamo la stampa ogni secondo 
-     * 
-     * sigemptyset(&my_mask);
-     * sigfillset(&my_mask);
-     * sigdelset(&my_mask, SIGALRM);
-     * sigsuspend(&my_mask);
-     * if (errno == EINTR) /* Gestiamo il valore di ritorno EINTR 
-     * errno = 0;
-     * TEST_ERROR
-    /*
 
     /* Terminazione figli */
     kill(-children[0], SIGTERM);

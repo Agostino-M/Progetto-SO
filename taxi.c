@@ -4,7 +4,7 @@
 /* Prototipi funzioni */
 int create_taxi();
 void alarm_handler();
-int move();
+void move(int x, int y);
 int move_up(int x, int y);
 int move_down(int x, int y);
 int move_left(int x, int y);
@@ -125,6 +125,12 @@ int main(int argc, char const *argv[])
                 sleep(3); /* attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
                 continue;
             }
+
+            else
+            {
+                /* Si sposta verso la richiesta più vicina trovata */
+                move(source_position.x, source_position.y);
+            }
         }
         errno = 0;
         TEST_ERROR
@@ -142,8 +148,8 @@ int main(int argc, char const *argv[])
         /* Parte il timer SO_TIMEOUT */
         alarm(10); /* SO_TIMEOUT */
 
-        /* Spostamento */
-        move();
+        /* Spostamento verso la destinazione */
+        move(request.end.x, request.end.y);
     }
 
     /* Fine */
@@ -221,11 +227,133 @@ void close_taxi()
     TEST_ERROR
 }
 
-int move()
+void move(int x, int y)
 {
-    /* usare move_up/down/left/right per arrivare alla destinazione :) 
-     * https://rosettacode.org/wiki/A*_search_algorithm#C
-     */
+    int Dx, Dy;
+
+    Dx = x - actual_position.x;
+    Dy = y - actual_position.y;
+
+    while (Dx != 0)
+    {
+        Dy = y - actual_position.y;
+
+        if (Dx > 0) /* Mi muovo verso il basso */
+        {
+            if (city->matrix[actual_position.x + 1][actual_position.y].is_hole) /* hole */
+            {
+                if (actual_position.y == SO_WIDTH - 1 || Dy < 0)
+                {
+                    actual_position.y--;
+                    actual_position.x++;
+                    Dx--;
+                }
+                else
+                {
+                    actual_position.y++;
+                    actual_position.x++;
+                    Dx--;
+                }
+            }
+
+            else
+            {
+                actual_position.x++;
+                Dx--;
+            }
+        }
+
+        else /*Mi muovo verso l'alto Dx < 0*/
+        {
+            if (city->matrix[actual_position.x - 1][actual_position.y].is_hole) /* hole */
+            {
+                if (actual_position.y == SO_WIDTH - 1 || Dy < 0)
+                {
+
+                    actual_position.y--;
+                    actual_position.x--;
+                    Dx++;
+                }
+                else
+                {
+                    actual_position.y++;
+                    actual_position.x--;
+                    Dx++;
+                }
+            }
+
+            else
+            {
+                actual_position.x--;
+                Dx++;
+            }
+        }
+    }
+
+    /* Mi sono spostato, Dy è cambiato */
+    Dy = y - actual_position.y;
+
+    while (Dy != 0)
+    {
+        if (Dy < 0) /* Mi muovo a sx */
+        {
+
+            if (city->matrix[actual_position.x][actual_position.y - 1].is_hole) /* hole */
+            {
+                if (actual_position.x == SO_HEIGHT - 1)
+                {
+                    actual_position.x--;
+                    actual_position.y--;
+                    actual_position.y--;
+                    actual_position.x++;
+                    Dy = Dy + 2;
+                }
+                else
+                {
+                    actual_position.x++;
+                    actual_position.y--;
+                    actual_position.y--;
+                    actual_position.x--;
+                    Dy = Dy + 2;
+                }
+            }
+
+            else
+            {
+                actual_position.y--;
+                Dy++;
+            }
+        }
+
+        else
+        {
+            if (city->matrix[actual_position.x][actual_position.y + 1].is_hole) /* hole */
+            {
+                if (actual_position.x == SO_HEIGHT - 1)
+                {
+                    actual_position.x--;
+                    actual_position.y++;
+                    actual_position.y++;
+                    actual_position.x++;
+                    Dy = Dy - 2;
+                }
+                else
+                {
+                    actual_position.x++;
+                    actual_position.y++;
+                    actual_position.y++;
+                    actual_position.x--;
+                    Dy = Dy - 2;
+                }
+            }
+
+            else
+            {
+                actual_position.y++;
+                Dy--;
+            }
+        }
+    }
 
     sleep(1);
     doing_request = 0; /* richiesta completata */

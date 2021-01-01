@@ -5,10 +5,10 @@
 int create_taxi();
 void alarm_handler();
 void move(int x, int y);
-int move_up(int x, int y);
-int move_down(int x, int y);
-int move_left(int x, int y);
-int move_right(int x, int y);
+void move_up();
+void move_down();
+void move_left();
+void move_right();
 void close_taxi();
 
 int id_shd_mem;
@@ -20,7 +20,9 @@ int id_sem_request;
 struct shared_map *city;
 
 coordinate actual_position; /* Eventualmente con struct */
-int doing_request = 0;      /* Indica se il taxi sta eseguendo una richiesta */
+struct timespec crossing_time;
+
+int doing_request = 0; /* Indica se il taxi sta eseguendo una richiesta */
 
 int main(int argc, char const *argv[])
 {
@@ -153,6 +155,12 @@ int main(int argc, char const *argv[])
 
         /* Spostamento verso la destinazione */
         move(request.end.x, request.end.y);
+
+        alarm(0);
+
+        doing_request = 0; /* Richiesta completata */
+
+        /* Segnalo che ho completato la richiesta */
     }
 
     /* Fine */
@@ -248,21 +256,21 @@ void move(int x, int y)
             {
                 if (actual_position.y == SO_WIDTH - 1 || Dy < 0)
                 {
-                    actual_position.y--;
-                    actual_position.x++;
+                    move_left();
+                    move_down();
                     Dx--;
                 }
                 else
                 {
-                    actual_position.y++;
-                    actual_position.x++;
+                    move_right();
+                    move_down();
                     Dx--;
                 }
             }
 
             else
             {
-                actual_position.x++;
+                move_down();
                 Dx--;
             }
         }
@@ -274,21 +282,21 @@ void move(int x, int y)
                 if (actual_position.y == SO_WIDTH - 1 || Dy < 0)
                 {
 
-                    actual_position.y--;
-                    actual_position.x--;
+                    move_left();
+                    move_up();
                     Dx++;
                 }
                 else
                 {
-                    actual_position.y++;
-                    actual_position.x--;
+                    move_right();
+                    move_up();
                     Dx++;
                 }
             }
 
             else
             {
-                actual_position.x--;
+                move_up();
                 Dx++;
             }
         }
@@ -306,25 +314,25 @@ void move(int x, int y)
             {
                 if (actual_position.x == SO_HEIGHT - 1)
                 {
-                    actual_position.x--;
-                    actual_position.y--;
-                    actual_position.y--;
-                    actual_position.x++;
+                    move_up();
+                    move_left();
+                    move_left();
+                    move_down();
                     Dy = Dy + 2;
                 }
                 else
                 {
-                    actual_position.x++;
-                    actual_position.y--;
-                    actual_position.y--;
-                    actual_position.x--;
+                    move_down();
+                    move_left();
+                    move_left();
+                    move_up();
                     Dy = Dy + 2;
                 }
             }
 
             else
             {
-                actual_position.y--;
+                move_left();
                 Dy++;
             }
         }
@@ -335,82 +343,73 @@ void move(int x, int y)
             {
                 if (actual_position.x == SO_HEIGHT - 1)
                 {
-                    actual_position.x--;
-                    actual_position.y++;
-                    actual_position.y++;
-                    actual_position.x++;
+                    move_up();
+                    move_right();
+                    move_right();
+                    move_down();
                     Dy = Dy - 2;
                 }
                 else
                 {
-                    actual_position.x++;
-                    actual_position.y++;
-                    actual_position.y++;
-                    actual_position.x--;
+                    move_down();
+                    move_right();
+                    move_right();
+                    move_up();
                     Dy = Dy - 2;
                 }
             }
 
             else
             {
-                actual_position.y++;
+                move_right();
                 Dy--;
             }
         }
     }
 
-    sleep(1);
-    doing_request = 0; /* richiesta completata */
+    printf(" Taxi PID:%d  Mi sono spostato in : [ %d , %d ] \n", getpid(), actual_position.x, actual_position.y);
 }
 
-int move_up(int x, int y)
+void move_up()
 {
-    if (city->matrix[x][y + 1].is_hole)
-        return -1;
-
-    dec_sem(id_sem_cap, INDEX(x, y + 1));
-
-    city->matrix[x][y + 1].crossing_cont++;
-    sleep(city->matrix[x][y + 1].crossing_time);
-
-    return 0;
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    actual_position.x--;
+    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    TEST_ERROR
+    city->matrix[actual_position.x][actual_position.y].crossing_cont++;
+    crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    nanosleep(&crossing_time, NULL);
 }
 
-int move_down(int x, int y)
+void move_down()
 {
-    if (city->matrix[x][y - 1].is_hole)
-        return -1;
-
-    dec_sem(id_sem_cap, INDEX(x, y - 1));
-
-    city->matrix[x][y - 1].crossing_cont++;
-    sleep(city->matrix[x][y - 1].crossing_time);
-
-    return 0;
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    actual_position.x++;
+    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    TEST_ERROR
+    city->matrix[actual_position.x][actual_position.y].crossing_cont++;
+    crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    nanosleep(&crossing_time, NULL);
 }
 
-int move_left(int x, int y)
+void move_left()
 {
-    if (city->matrix[x - 1][y].is_hole)
-        return -1;
-
-    dec_sem(id_sem_cap, INDEX(x - 1, y));
-
-    city->matrix[x - 1][y].crossing_cont++;
-    sleep(city->matrix[x - 1][y].crossing_time);
-
-    return 0;
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    actual_position.y--;
+    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    TEST_ERROR
+    city->matrix[actual_position.x][actual_position.y].crossing_cont++;
+    crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    nanosleep(&crossing_time, NULL);
 }
 
-int move_right(int x, int y)
+void move_right()
 {
-    if (city->matrix[x + 1][y].is_hole)
-        return -1;
-
-    dec_sem(id_sem_cap, INDEX(x + 1, y));
-
-    city->matrix[x + 1][y].crossing_cont++;
-    sleep(city->matrix[x + 1][y].crossing_time);
-
-    return 0;
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    actual_position.y++;
+    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    TEST_ERROR
+    city->matrix[actual_position.x][actual_position.y].crossing_cont++;
+    crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    nanosleep(&crossing_time, NULL);
 }

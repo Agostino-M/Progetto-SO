@@ -23,7 +23,6 @@
 #define QUARTIERE 3
 #define INDEX(x, y) (((x) * (SO_WIDTH)) + (y))
 
-
 #define TEST_ERROR                                \
     if (errno)                                    \
     {                                             \
@@ -34,7 +33,7 @@
                 getpid(),                         \
                 errno,                            \
                 strerror(errno));                 \
-                exit(EXIT_FAILURE);               \
+        exit(EXIT_FAILURE);                       \
     }
 
 typedef struct

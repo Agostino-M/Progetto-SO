@@ -296,7 +296,15 @@ int main(int argc, char const *argv[])
         errno = 0;
     TEST_ERROR
 
-    /* Stampa carattersitiche finali */
+    /*
+     * Stampa carattersitiche finali 
+     * - numero viaggi (eseguiti con successo, inevasi e abortiti)
+     * - la mappa con evidenziate le SO_SOURCES sorgenti e le SO_TOP_CELLS celle più attraversate
+     * - il taxi che:
+     *      1. ha fatto più strada (numero di celle) di tutti
+     *      2. ha fatto il viaffio più lungo come tempo
+     *      3. ha raccolto più richieste
+     */
     print_resource(id_sem_request);
 
     /*Eliminazione IPC */
@@ -384,8 +392,6 @@ int create_matrix()
             attempts++;
             if (attempts > 30)
                 return -1; /* Fallimento */
-
-            /* continue; */
         }
     }
     return 0;

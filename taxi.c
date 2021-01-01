@@ -67,7 +67,7 @@ int main(int argc, char const *argv[])
     if (create_taxi() == -1)
         fprintf(stderr, "Taxi PID:%d : Impossibile effettuare la creazione.\n", getpid());
 
-    printf("Taxi PID:%d : Buongiornissimo, sono stato creato in (%d,%d):\n", getpid(), actual_position.x, actual_position.y);
+    printf("Taxi PID:%d : Buongiornissimo, sono stato creato in (%d,%d)\n", getpid(), actual_position.x, actual_position.y);
 
     /* Semaforo wait for zero */
     wait_sem_zero(id_sem_taxi, 0);
@@ -80,7 +80,7 @@ int main(int argc, char const *argv[])
         /* Verifica se la richiesta si trova nella cella attuale */
         if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y)) != -1)
         {
-            printf("Taxi : Richiesta trovata nel punto di origine\n");
+            printf("Taxi PID:%d : Richiesta trovata nel punto di origine\n", getpid());
             source_position.x = actual_position.x;
             source_position.y = actual_position.y;
         }
@@ -111,7 +111,7 @@ int main(int argc, char const *argv[])
 
                                         source_position.x = actual_position.x + i;
                                         source_position.y = actual_position.y + j;
-                                        printf("Taxi PID : %d  Richiesta trovata nel punto più vicino (%d, %d) con PID %d: \n", getpid(), source_position.x, source_position.y, city->matrix[source_position.x][source_position.y].request_pid);
+                                        printf("Taxi PID:%d : Richiesta trovata nel punto più vicino (%d, %d) con PID %d: \n", getpid(), source_position.x, source_position.y, city->matrix[source_position.x][source_position.y].request_pid);
                                         found = 1;
                                     }
                                     else
@@ -161,6 +161,8 @@ int main(int argc, char const *argv[])
         doing_request = 0; /* Richiesta completata */
 
         /* Segnalo che ho completato la richiesta */
+        /* viaggi eseguiti si devono scrivere sulla memoria condivisa */
+        /* viaggi abortiti si devono scrivere sulla memoria condivisa */
     }
 
     /* Fine */
@@ -367,7 +369,7 @@ void move(int x, int y)
         }
     }
 
-    printf(" Taxi PID:%d  Mi sono spostato in : [ %d , %d ] \n", getpid(), actual_position.x, actual_position.y);
+    printf("Taxi PID:%d : Mi sono spostato in : [ %d , %d ] \n", getpid(), actual_position.x, actual_position.y);
 }
 
 void move_up()

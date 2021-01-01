@@ -4,7 +4,6 @@ void print_resource(int id_sem)
 {
     unsigned short sem_vals[NUM_RISORSE], i, j = 1;
 
-    printf("Matrice semafori \n\n");
     semctl(id_sem, 0 /* ignored */, GETALL, sem_vals);
     printf("  ");
     for (i = 0; i < NUM_RISORSE; i++)

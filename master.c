@@ -103,7 +103,7 @@ int main(int argc, char const *argv[])
 
     printf("Premi INVIO per continuare.\n");
     getchar();
-    printf("-----------------Creazione Richieste-----------------\n");
+    printf("---------------------Creazione Richieste---------------------\n");
 
     children = malloc(SO_SOURCES * sizeof(pid_t));
     taxi = malloc(NUM_RISORSE * sizeof(pid_t));
@@ -150,7 +150,9 @@ int main(int argc, char const *argv[])
 
                 do
                 {
-                    errno = 0;
+                    if (errno == EAGAIN)
+                        errno = 0;
+                    TEST_ERROR
                     random_x_p = rand() % SO_HEIGHT;
                     random_y_p = rand() % SO_WIDTH;
 
@@ -209,14 +211,15 @@ int main(int argc, char const *argv[])
         }
     }
 
-    sleep(15);
+    sleep(10);
     printf("\n\n");
     print_resource(id_sem_request);
     print_resource(id_sem_write);
     print_matrix(city, 5);
-
+    printf("Premi INVIO per continuare.\n");
     getchar();
-    printf("-----------------Creazione Taxi-----------------\n");
+
+    printf("---------------------Creazione Taxi---------------------\n");
     /* Creazione taxi */
     for (i = 0; i < 5; i++)
     {
@@ -256,7 +259,7 @@ int main(int argc, char const *argv[])
     sleep(2);
     printf("Premi INVIO per continuare.\n");
     getchar();
-    printf("-----------------Inizio Gioco-----------------\n");
+    printf("---------------------Inizio Gioco---------------------\n");
 
     /* Semaforo wait for zero */
     printf("Master PID:%d : Rilascio il semaforo per i taxi...\n", getpid());
@@ -282,20 +285,17 @@ int main(int argc, char const *argv[])
     }
     TEST_ERROR
 
-
-
     /* Terminazione figli */
     kill(-children[0], SIGTERM);
     kill(-taxi[0], SIGTERM);
 
     /* Attesa terminazione figli */
     while (wait(NULL) != -1)
-    {
-        
-    }
+        ;
+    if (errno == ECHILD)
+        errno = 0;
+    TEST_ERROR
 
-    errno = 0;
-    
     /* Stampa carattersitiche finali */
     print_resource(id_sem_request);
 

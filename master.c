@@ -7,10 +7,12 @@ int create_matrix();
 void fill_resource();
 void signal_handler(int signum);
 void source_handler(int signum);
+void close_master();
+void create_taxi_child();
 
 /* Variabili globali */
 unsigned int SO_HOLES = 10;
-unsigned int SO_SOURCES = 20;
+unsigned int SO_SOURCES = 190;
 unsigned int SO_CAP_MIN = 1;
 unsigned int SO_CAP_MAX = 10;
 unsigned int SO_TAXI = 95;
@@ -23,26 +25,29 @@ unsigned int SO_DURATION = 20;
 int flag_timer = 0; /* flag dell'handler del master*/
 
 /* ID dell'IPC del semaforo e` globale */
-int id_sem_cap, id_sem_taxi, id_sem_request, id_sem_write;
+int id_sem_cap, id_sem_taxi, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write;
 struct shared_map *city;
 struct shared_stats *stats;
+pid_t *taxi;
 
 int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
-    int id_shd_mem, id_shd_stats, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
-    int viaggi_inevasi;
+    int cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value, viaggi_inevasi;
     struct msqid_ds buff;
-    pid_t *children;
-    pid_t *taxi;
+    pid_t *children = malloc(SO_SOURCES * sizeof(pid_t));
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
+    taxi = malloc(NUM_RISORSE * sizeof(pid_t));
+
+    printf("Master PID:%d : Inizializzazione gioco...\n", getpid());
 
     /* Creazione signal handler */
     bzero(&sa, sizeof(struct sigaction));
     sa.sa_handler = signal_handler;
     sigaction(SIGALRM, &sa, NULL);
+    sigaction(SIGUSR1, &sa, NULL);
 
     /* Creazione memoria condivisa */
     id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0600);
@@ -55,7 +60,6 @@ int main(int argc, char const *argv[])
     TEST_ERROR;
     stats = shmat(id_shd_stats, NULL, 0);
     TEST_ERROR
-
 
     /* Creazione array semafori capienza */
     id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
@@ -115,9 +119,6 @@ int main(int argc, char const *argv[])
     getchar();
     printf("---------------------Creazione Richieste---------------------\n");
 
-    children = malloc(SO_SOURCES * sizeof(pid_t));
-    taxi = malloc(NUM_RISORSE * sizeof(pid_t));
-
     /* Creazione richieste */
     for (i = 0; i < SO_SOURCES; i++)
     {
@@ -171,7 +172,8 @@ int main(int argc, char const *argv[])
                     }
 
                 } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole);
-
+                TEST_ERROR
+                
                 city->matrix[random_x_p][random_y_p].request_pid = getpid();
 
                 /* Estraggo coordinate arrivo */
@@ -230,37 +232,20 @@ int main(int argc, char const *argv[])
 
     printf("---------------------Creazione Taxi---------------------\n");
     /* Creazione taxi */
-    for (i = 0; i < 1; i++)
+    for (i = 0; i < SO_TAXI; i++)
     {
         switch (fork_value = fork())
         {
         case -1:
             TEST_ERROR
             break;
+
         case 0:
-        {
-            char sid_shd_mem[20],
-                sid_shd_stats[20],
-                sid_msg_queue[20],
-                sid_sem_cap[20],
-                sid_sem_taxi[20],
-                sid_sem_request[20];
+            create_taxi_child();
+            break;
 
-            snprintf(sid_shd_mem, 20, "%d", id_shd_mem);
-            snprintf(sid_shd_stats, 20, "%d", id_shd_stats);
-            snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
-            snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
-            snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
-            snprintf(sid_sem_request, 20, "%d", id_sem_request);
-
-            execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_taxi, sid_sem_request, NULL);
-            TEST_ERROR
-
-            exit(EXIT_FAILURE);
-        }
         default:
             taxi[i] = fork_value;
-            TEST_ERROR
             setpgid(fork_value, taxi[0]);
             TEST_ERROR
             break;
@@ -308,7 +293,7 @@ int main(int argc, char const *argv[])
          *   TAXI PID:202 : [0,1]  TAXI PID:201 : [19,7]  TAXI PID:203: [18,13]
          *   TAXI PID:205 : [3,12]  TAXI PID:209 : [5,0]  TAXI PID:207 : [0,15]
          */
-
+        printf("Mappa della città:\n");
         print_status(city, id_sem_cap);
         sleep(1);
     }
@@ -334,28 +319,59 @@ int main(int argc, char const *argv[])
      *      2. ha fatto il viaggio più lungo come tempo
      *      3. ha raccolto più richieste
      */
-    printf("Matrice con le richieste\n");
+    printf("Matrice con le richieste :\n");
     print_resource(id_sem_request);
-    printf("SO_TOP_CELLS %d celle più attraversate", SO_TOP_CELLS);
+    printf("SO_TOP_CELLS %d celle più attraversate :\n", SO_TOP_CELLS);
     /* matrice con solo le SO_TOP_CELLS celle più attraversate */
-    printf("Matrice con i taxi\n");
-    /* matrice che indica quanti taxi sono su ogni cella */
 
     /* Prelievo viaggi inevase */
     msgctl(id_msg_queue, IPC_STAT, &buff);
     viaggi_inevasi = buff.msg_qnum;
 
-    /* viaggi eseguiti si trovano scritti sulla memoria condivisa */
-    /* viaggi abortiti si trovano scritti sulla memoria condivisa */
-
     printf("Viaggi eseguiti : %d\n"
            "Viaggi abortiti : %d\n"
-           "Viaggi inevasi : %d\n",
-           0, 0, viaggi_inevasi);
+           "Viaggi inevasi : %d\n\n",
+           stats->num_viaggi_eseguiti, stats->num_viaggi_abortiti, viaggi_inevasi);
+
+    printf("Il TAXI %d ha fatto più strada : %d\n"
+           "Il TAXI %d ha fatto il viaggio più lungo : %ld\n"
+           "Il TAXI %d ha raccolto più richieste : %d\n\n",
+           stats->pid_max_strada_fatta, stats->max_strada_fatta,
+           stats->pid_max_viaggio, stats->max_viaggio,
+           stats->pid_max_richieste, stats->max_richieste);
 
     /*Eliminazione IPC */
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
+    close_master();
 
+    printf("Master PID:%d : Terminazione completata.\n", getpid());
+    exit(EXIT_SUCCESS);
+}
+
+void create_taxi_child()
+{
+    char sid_shd_mem[20],
+        sid_shd_stats[20],
+        sid_msg_queue[20],
+        sid_sem_cap[20],
+        sid_sem_taxi[20],
+        sid_sem_request[20];
+
+    snprintf(sid_shd_mem, 20, "%d", id_shd_mem);
+    snprintf(sid_shd_stats, 20, "%d", id_shd_stats);
+    snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
+    snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
+    snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
+    snprintf(sid_sem_request, 20, "%d", id_sem_request);
+
+    execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_taxi, sid_sem_request, NULL);
+    TEST_ERROR
+
+    exit(EXIT_FAILURE);
+}
+
+void close_master()
+{
     /* Detaching ed eliminazione memoria condivisa */
     shmdt(city);
     shmctl(id_shd_mem, IPC_RMID, 0);
@@ -377,9 +393,6 @@ int main(int argc, char const *argv[])
     /* Chiusura coda di messaggi */
     msgctl(id_msg_queue, IPC_RMID, NULL);
     TEST_ERROR
-
-    printf("Master PID:%d : Terminazione completata.\n", getpid());
-    exit(EXIT_SUCCESS);
 }
 
 int create_matrix()
@@ -456,24 +469,53 @@ void fill_resource()
     {
         for (j = 0; j < SO_WIDTH; j++)
         {
-            random = rand() % SO_CAP_MAX + SO_CAP_MIN;
-            set_sem(id_sem_cap, INDEX(i, j), random);
-            TEST_ERROR
-            city->matrix[i][j].nmax_taxi = random;
+            if (city->matrix[i][j].is_hole)
+            {
+                set_sem(id_sem_cap, INDEX(i, j), 0);
+                TEST_ERROR
+            }
+            else
+            {
+                random = rand() % SO_CAP_MAX + SO_CAP_MIN;
+                set_sem(id_sem_cap, INDEX(i, j), random);
+                TEST_ERROR
+                city->matrix[i][j].nmax_taxi = random;
+            }
         }
     }
 }
 
 void signal_handler(int signum)
 {
+
     switch (signum)
     {
     case SIGALRM:
         flag_timer = 1;
         break;
+
     case SIGUSR1:
-        printf("Master : Segnale SIGUSR1 arrivato..\n");
-        /* Crea una richiesta a mano / Richiama una funzione */
+    {
+        int fork_value;
+
+        printf("Master : Segnale SIGUSR1 arrivato.. Creo un nuovo taxi\n");
+
+        switch (fork())
+        {
+        case -1:
+            TEST_ERROR
+            break;
+
+        case 0:
+            create_taxi_child();
+
+        default:
+            /*setpgid(fork_value, taxi[0]);
+            TEST_ERROR -> error 3 no such process - ESRCH
+            */
+            break;
+        }
+    }
     }
 }
 

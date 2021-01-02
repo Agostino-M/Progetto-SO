@@ -87,7 +87,7 @@ int main(int argc, char const *argv[])
     /* Attacching memoria condivisa */
     city = shmat(id_shd_mem, NULL, 0);
     TEST_ERROR
-    stats = shmat(id_sem_stats, NULL, 0);
+    stats = shmat(id_shd_stats, NULL, 0);
     TEST_ERROR
 
     /* Creazione in posizione casuale */
@@ -110,6 +110,7 @@ int main(int argc, char const *argv[])
             printf("Taxi PID:%d : Richiesta trovata nel punto di origine\n", getpid());
             source_position.x = actual_position.x;
             source_position.y = actual_position.y;
+            doing_request = 1;
         }
         else
         {
@@ -140,6 +141,7 @@ int main(int argc, char const *argv[])
                                         source_position.y = actual_position.y + j;
                                         printf("Taxi PID:%d : Richiesta trovata nel punto più vicino (%d, %d) con PID %d: \n", getpid(), source_position.x, source_position.y, city->matrix[source_position.x][source_position.y].request_pid);
                                         found = 1;
+                                        doing_request = 1;
                                     }
                                     else
                                     {
@@ -161,6 +163,7 @@ int main(int argc, char const *argv[])
 
             else
             {
+
                 /* Si sposta verso la richiesta più vicina trovata */
                 move(source_position.x, source_position.y);
             }
@@ -175,7 +178,8 @@ int main(int argc, char const *argv[])
                "- Arrivo x : %d \n"
                "- Arrivo y : %d\n",
                getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
-        doing_request = 1;
+
+        num_richieste++;
 
         /* Parte il timer SO_TIMEOUT */
         alarm(10); /* SO_TIMEOUT */
@@ -190,8 +194,7 @@ int main(int argc, char const *argv[])
 
         /* Segnalo che ho completato la richiesta */
         mutex_op(0);
-        /* viaggi eseguiti si devono scrivere sulla memoria condivisa */
-        /* viaggi abortiti si devono scrivere sulla memoria condivisa */
+        printf("durata_viaggio %ld, strada_fatta %d , num_richieste %d\n", durata_viaggio, strada_fatta, num_richieste);
     }
 
     /* Fine */
@@ -264,6 +267,8 @@ void close_taxi()
     shmdt(city);
     TEST_ERROR
     shmdt(stats);
+    TEST_ERROR
+    semctl(id_sem_stats, 0, IPC_RMID);
     TEST_ERROR
 
     exit(EXIT_SUCCESS);
@@ -409,6 +414,7 @@ void move_up()
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
     durata_viaggio += crossing_time.tv_nsec;
+    strada_fatta++;
     nanosleep(&crossing_time, NULL);
 }
 
@@ -421,6 +427,7 @@ void move_down()
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
     durata_viaggio += crossing_time.tv_nsec;
+    strada_fatta++;
     nanosleep(&crossing_time, NULL);
 }
 
@@ -433,6 +440,7 @@ void move_left()
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
     durata_viaggio += crossing_time.tv_nsec;
+    strada_fatta++;
     nanosleep(&crossing_time, NULL);
 }
 
@@ -445,6 +453,7 @@ void move_right()
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
     durata_viaggio += crossing_time.tv_nsec;
+    strada_fatta++;
     nanosleep(&crossing_time, NULL);
 }
 

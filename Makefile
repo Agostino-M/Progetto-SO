@@ -6,10 +6,10 @@ TARGET = Master
 TARGET1 = Taxi
 
 # Object files necessari per produrre l'eseguibile
-OBJ = sem_lib.o utility.o handling.o master.o
+OBJ = sem_lib.o utility.o master.o
 OBJ1 = sem_lib.o utility.o taxi.o
 
-HEADLER = sem_lib.h utility.h handling.h
+HEADLER = sem_lib.h utility.h
 
 # Regola che permette di creare i file oggetto unico e di produrre l'eseguibile
 $(TARGET): $(OBJ) $(OBJ1)
@@ -76,6 +76,3 @@ sem_lib:
 
 utility:
 	gcc -c utility.c
-
-handling:
-	gcc -c handling.c

@@ -242,7 +242,7 @@ void alarm_handler(int signum)
     if (signum == SIGALRM)
     {
         printf("Taxi PID:%d : Timer scaduto...\n", getpid());
-
+        kill(getppid(), SIGUSR1);
         close_taxi();
     }
 

@@ -71,7 +71,7 @@ struct shared_stats
     int num_viaggi_abortiti;
     int max_strada_fatta;
     pid_t pid_max_strada_fatta;
-    int max_viaggio;
+    long max_viaggio;
     pid_t pid_max_viaggio;
     int max_richieste;
     pid_t pid_max_richieste;

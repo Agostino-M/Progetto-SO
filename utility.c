@@ -2,9 +2,8 @@
 
 void print_resource(int id_sem)
 {
-    unsigned short sem_vals[NUM_RISORSE], i, j = 1;
+    int i, j = 1;
 
-    semctl(id_sem, 0 /* ignored */, GETALL, sem_vals);
     printf("  ");
     for (i = 0; i < NUM_RISORSE; i++)
     {
@@ -58,7 +57,7 @@ void print_matrix(struct shared_map *mat, int field)
             switch (field)
             {
             case 1:
-                printf("%2d ", mat->matrix[i][j].crossing_time);
+                printf("%2ld ", mat->matrix[i][j].crossing_time);
                 break;
 
             case 2:
@@ -76,6 +75,29 @@ void print_matrix(struct shared_map *mat, int field)
             case 5:
                 printf("%2d ", mat->matrix[i][j].request_pid);
                 break;
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_status(struct shared_map *mat, int id_sem_cap)
+{
+    int i, j, sem_value;
+
+    for (i = 0; i < SO_HEIGHT; i++)
+    {
+        for (j = 0; j < SO_WIDTH; j++)
+        {
+            if (mat->matrix[i][j].is_hole)
+            {
+                printf("%2d ", -1);
+            }
+            else
+            {
+                sem_value = semctl(id_sem_cap, INDEX(i, j), GETVAL);
+                printf("%2d ", mat->matrix[i][j].nmax_taxi - sem_value);
             }
         }
         printf("\n");

@@ -14,7 +14,7 @@ unsigned int SO_SOURCES = 20;
 unsigned int SO_CAP_MIN = 1;
 unsigned int SO_CAP_MAX = 10;
 unsigned int SO_TAXI = 95;
-/* unsigned int SO_TOP_CELLS; */
+unsigned int SO_TOP_CELLS = 40;
 unsigned long int SO_TIMENSEC_MIN = 100000000;
 unsigned long int SO_TIMENSEC_MAX = 300000000;
 unsigned int SO_TIMEOUT = 1;
@@ -25,11 +25,14 @@ int flag_timer = 0; /* flag dell'handler del master*/
 /* ID dell'IPC del semaforo e` globale */
 int id_sem_cap, id_sem_taxi, id_sem_request, id_sem_write;
 struct shared_map *city;
+struct shared_stats *stats;
 
 int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
-    int id_shd_mem, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
+    int id_shd_mem, id_shd_stats, id_msg_queue, cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
+    int viaggi_inevasi;
+    struct msqid_ds buff;
     pid_t *children;
     pid_t *taxi;
     sigset_t my_mask;
@@ -42,12 +45,17 @@ int main(int argc, char const *argv[])
     sigaction(SIGALRM, &sa, NULL);
 
     /* Creazione memoria condivisa */
-    id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0666);
+    id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0600);
+    TEST_ERROR;
+    id_shd_stats = shmget(IPC_PRIVATE, SHARED_STATS_LENGHT, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR;
 
     /* Attacching memoria condivisa */
     city = shmat(id_shd_mem, NULL, 0);
     TEST_ERROR;
+    stats = shmat(id_shd_stats, NULL, 0);
+    TEST_ERROR
+
 
     /* Creazione array semafori capienza */
     id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
@@ -171,7 +179,7 @@ int main(int argc, char const *argv[])
                 {
                     random_x_a = rand() % SO_HEIGHT;
                     random_y_a = rand() % SO_WIDTH;
-                } while (city->matrix[random_x_a][random_y_a].is_hole && random_x_a == random_x_p && random_y_a == random_y_p);
+                } while (city->matrix[random_x_a][random_y_a].is_hole || random_x_a == random_x_p && random_y_a == random_y_p);
 
                 /* Write del messaggio sulla coda */
                 request.mtype = (long)getpid();
@@ -222,7 +230,7 @@ int main(int argc, char const *argv[])
 
     printf("---------------------Creazione Taxi---------------------\n");
     /* Creazione taxi */
-    for (i = 0; i < 20; i++)
+    for (i = 0; i < 1; i++)
     {
         switch (fork_value = fork())
         {
@@ -232,18 +240,20 @@ int main(int argc, char const *argv[])
         case 0:
         {
             char sid_shd_mem[20],
+                sid_shd_stats[20],
                 sid_msg_queue[20],
                 sid_sem_cap[20],
                 sid_sem_taxi[20],
                 sid_sem_request[20];
 
             snprintf(sid_shd_mem, 20, "%d", id_shd_mem);
+            snprintf(sid_shd_stats, 20, "%d", id_shd_stats);
             snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
             snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
             snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
             snprintf(sid_sem_request, 20, "%d", id_sem_request);
 
-            execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_msg_queue, sid_sem_cap, sid_sem_taxi, sid_sem_request, NULL);
+            execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_taxi, sid_sem_request, NULL);
             TEST_ERROR
 
             exit(EXIT_FAILURE);
@@ -288,7 +298,7 @@ int main(int argc, char const *argv[])
     {
         /*
          * Stampa stato occupazione celle:
-         * - Matrice pid taxi
+         * - Matrice pid taxi ; Ogni cella ha più taxi ??
          * - Matrice pid richieste
          * 
          * e/o 
@@ -298,6 +308,8 @@ int main(int argc, char const *argv[])
          *   TAXI PID:202 : [0,1]  TAXI PID:201 : [19,7]  TAXI PID:203: [18,13]
          *   TAXI PID:205 : [3,12]  TAXI PID:209 : [5,0]  TAXI PID:207 : [0,15]
          */
+
+        print_status(city, id_sem_cap);
         sleep(1);
     }
     printf("Master : Timer scaduto.. Il gioco termina.\n");
@@ -330,8 +342,6 @@ int main(int argc, char const *argv[])
     /* matrice che indica quanti taxi sono su ogni cella */
 
     /* Prelievo viaggi inevase */
-    int viaggi_inevasi;
-    struct msqid_ds buff;
     msgctl(id_msg_queue, IPC_STAT, &buff);
     viaggi_inevasi = buff.msg_qnum;
 
@@ -349,6 +359,9 @@ int main(int argc, char const *argv[])
     /* Detaching ed eliminazione memoria condivisa */
     shmdt(city);
     shmctl(id_shd_mem, IPC_RMID, 0);
+    TEST_ERROR
+    shmdt(stats);
+    shmctl(id_shd_stats, IPC_RMID, 0);
     TEST_ERROR
 
     /* Eliminazione semafori */
@@ -436,13 +449,18 @@ int create_matrix()
 void fill_resource()
 {
     struct sembuf sops[NUM_RISORSE];
-    int i, j;
+    int i, j, random;
     srand(getpid());
 
-    for (i = 0; i < NUM_RISORSE; i++)
+    for (i = 0; i < SO_HEIGHT; i++)
     {
-        set_sem(id_sem_cap, i, rand() % SO_CAP_MAX + SO_CAP_MIN);
-        TEST_ERROR
+        for (j = 0; j < SO_WIDTH; j++)
+        {
+            random = rand() % SO_CAP_MAX + SO_CAP_MIN;
+            set_sem(id_sem_cap, INDEX(i, j), random);
+            TEST_ERROR
+            city->matrix[i][j].nmax_taxi = random;
+        }
     }
 }
 

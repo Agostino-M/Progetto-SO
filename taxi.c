@@ -10,14 +10,20 @@ void move_down();
 void move_left();
 void move_right();
 void close_taxi();
+void mutex_op(int op);
 
 int id_shd_mem;
+int id_shd_stats;
 int id_msg_queue;
 int id_sem_cap;
 int id_sem_taxi;
 int id_sem_request;
+int id_sem_stats;
+int strada_fatta = 0, num_richieste = 0;
+long durata_viaggio;
 
 struct shared_map *city;
+struct shared_stats *stats;
 
 coordinate actual_position; /* Eventualmente con struct */
 struct timespec crossing_time;
@@ -32,8 +38,25 @@ int main(int argc, char const *argv[])
     coordinate source_position;
     int iter, i, j, a, b, found;
 
+    /* Array di semafori di mutua esclusione per incremento contatori in mem condivisa
+     * sem[0] : Eseguiti con successo
+     * sem[1] : Abortiti
+     * sem[2] : Taxi che ha fatto più strada
+     * sem[3] : Taxi che ha fatto il viaggio più lungo
+     * sem[4] : Taxi che ha raccolto più richieste
+     */
+
+    id_sem_stats = semget(IPC_PRIVATE, 5, IPC_CREAT | IPC_EXCL | 0600);
+    TEST_ERROR
+
+    for (i = 0; i < 5; i++)
+    {
+        set_sem(id_sem_stats, i, 1);
+        TEST_ERROR
+    }
+
     /* Controllo dei parametri ricevuti */
-    if (argc != 6)
+    if (argc != 7)
     {
         fprintf(stderr, "Taxi PID:%d : Numero di parametri errato.\n", getpid());
         exit(EXIT_FAILURE);
@@ -41,17 +64,19 @@ int main(int argc, char const *argv[])
 
     /* 
      * Prelievo argomenti argv 
-     * - argv[1] = id memoria condivisa
-     * - argv[2] = id coda di messaggi per le richieste
-     * - argv[3] = id semaforo delle capacità massime per taxi su una cella
-     * - argv[4] = id semaforo "wait for zero" che dà il via ai taxi
-     * - argv[5] = id semaforo che indica la presenza di una richiesta
+     * - argv[1] = id memoria condivisa city
+     * - argv[2] = id memoria condivisa stats
+     * - argv[3] = id coda di messaggi per le richieste
+     * - argv[4] = id semaforo delle capacità massime per taxi su una cella
+     * - argv[5] = id semaforo "wait for zero" che dà il via ai taxi
+     * - argv[6] = id semaforo che indica la presenza di una richiesta
      */
     id_shd_mem = atoi(argv[1]);
-    id_msg_queue = atoi(argv[2]);
-    id_sem_cap = atoi(argv[3]);
-    id_sem_taxi = atoi(argv[4]);
-    id_sem_request = atoi(argv[5]);
+    id_shd_stats = atoi(argv[2]);
+    id_msg_queue = atoi(argv[3]);
+    id_sem_cap = atoi(argv[4]);
+    id_sem_taxi = atoi(argv[5]);
+    id_sem_request = atoi(argv[6]);
 
     /* Creazione signal header */
     bzero(&sa, sizeof(struct sigaction));
@@ -61,6 +86,8 @@ int main(int argc, char const *argv[])
 
     /* Attacching memoria condivisa */
     city = shmat(id_shd_mem, NULL, 0);
+    TEST_ERROR
+    stats = shmat(id_sem_stats, NULL, 0);
     TEST_ERROR
 
     /* Creazione in posizione casuale */
@@ -154,6 +181,7 @@ int main(int argc, char const *argv[])
         alarm(10); /* SO_TIMEOUT */
 
         /* Spostamento verso la destinazione */
+        durata_viaggio = 0;
         move(request.end.x, request.end.y);
 
         alarm(0);
@@ -161,6 +189,7 @@ int main(int argc, char const *argv[])
         doing_request = 0; /* Richiesta completata */
 
         /* Segnalo che ho completato la richiesta */
+        mutex_op(0);
         /* viaggi eseguiti si devono scrivere sulla memoria condivisa */
         /* viaggi abortiti si devono scrivere sulla memoria condivisa */
     }
@@ -210,35 +239,34 @@ void alarm_handler(int signum)
     if (signum == SIGALRM)
     {
         printf("Taxi PID:%d : Timer scaduto...\n", getpid());
-        /* - gestire caso in cui stava gestendo una richiesta
-         * - gestire rilascio di risorse (semafori)
-         */
+
         close_taxi();
-        exit(EXIT_SUCCESS);
     }
 
     else if (signum == SIGTERM)
     {
         printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());
         close_taxi();
-        exit(EXIT_SUCCESS);
     }
 }
 
 void close_taxi()
 {
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y)); /* Libera la cella su cui si trovava */
     TEST_ERROR
-    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
 
     if (doing_request)
-    {
-        /* si comunica che la richiesta è stata abortita  MEMORIA CONDIVISA? PIPE?*/
-    }
+        mutex_op(1); /* Viaggio abortito */
+
+    /* Segnalo al master che mi sto ammazzando */
 
     /* Detaching memoria condivisa */
-    TEST_ERROR
     shmdt(city);
     TEST_ERROR
+    shmdt(stats);
+    TEST_ERROR
+
+    exit(EXIT_SUCCESS);
 }
 
 void move(int x, int y)
@@ -380,6 +408,7 @@ void move_up()
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    durata_viaggio += crossing_time.tv_nsec;
     nanosleep(&crossing_time, NULL);
 }
 
@@ -391,6 +420,7 @@ void move_down()
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    durata_viaggio += crossing_time.tv_nsec;
     nanosleep(&crossing_time, NULL);
 }
 
@@ -402,6 +432,7 @@ void move_left()
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    durata_viaggio += crossing_time.tv_nsec;
     nanosleep(&crossing_time, NULL);
 }
 
@@ -413,5 +444,48 @@ void move_right()
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
+    durata_viaggio += crossing_time.tv_nsec;
     nanosleep(&crossing_time, NULL);
+}
+
+void mutex_op(int op)
+{
+    if (op > 1 || op < 0)
+        return;
+
+    dec_sem(id_sem_stats, op);
+    TEST_ERROR
+
+    switch (op)
+    {
+    case 0: /* Viaggio eseguito */
+        stats->num_viaggi_eseguiti++;
+
+        if (stats->max_strada_fatta < strada_fatta) /* Taxi max strada fatta */
+        {
+            stats->max_strada_fatta = strada_fatta;
+            stats->pid_max_strada_fatta = getpid();
+        }
+
+        if (stats->max_viaggio < durata_viaggio) /* Taxi max viaggi */
+        {
+            stats->max_viaggio = durata_viaggio;
+            stats->pid_max_viaggio = getpid();
+        }
+
+        if (stats->max_richieste < num_richieste) /* Taxi max richieste eseguite */
+        {
+            stats->max_richieste = num_richieste;
+            stats->pid_max_richieste = getpid();
+        }
+
+        break;
+
+    case 1: /* Viaggio abortito */
+        stats->num_viaggi_abortiti++;
+        break;
+    }
+
+    rel_sem(id_sem_stats, op);
+    TEST_ERROR
 }

@@ -53,9 +53,8 @@ struct msg_request
 
 typedef struct
 {
-    int crossing_time;
+    long crossing_time;
     int nmax_taxi;
-    /*pid_t actual_pids[SO_CAP_MAX];*/
     int is_hole;
     int crossing_cont;
     pid_t request_pid;
@@ -66,7 +65,20 @@ struct shared_map
     cell matrix[SO_HEIGHT][SO_WIDTH];
 };
 
+struct shared_stats
+{
+    int num_viaggi_eseguiti;
+    int num_viaggi_abortiti;
+    int max_strada_fatta;
+    pid_t pid_max_strada_fatta;
+    int max_viaggio;
+    pid_t pid_max_viaggio;
+    int max_richieste;
+    pid_t pid_max_richieste;
+};
+
 #define SHARED_MAP_LENGTH (sizeof(struct shared_map))
+#define SHARED_STATS_LENGHT (sizeof(struct shared_stats))
 
 /* -----------------SEZIONE STAMPA----------------- */
 
@@ -84,5 +96,7 @@ void print_resource(int id_sem);
  * - campo: indice del campo (1: crossing_time; 2: crossing_cont; 3: is_hole; 4: nmax_taxi; 5: request_pid) 
 */
 void print_matrix(struct shared_map *mat, int field);
+
+void print_status(struct shared_map *mat, int id_sem_cap);
 
 #endif /* UTILITY_H */

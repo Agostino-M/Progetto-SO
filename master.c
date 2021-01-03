@@ -14,7 +14,7 @@ void create_taxi_child();
 unsigned int SO_HOLES = 10;
 unsigned int SO_SOURCES = 190;
 unsigned int SO_CAP_MIN = 1;
-unsigned int SO_CAP_MAX = 10;
+unsigned int SO_CAP_MAX = 1;
 unsigned int SO_TAXI = 95;
 unsigned int SO_TOP_CELLS = 40;
 unsigned long int SO_TIMENSEC_MIN = 100000000;
@@ -182,7 +182,7 @@ int main(int argc, char const *argv[])
 
                 } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole);
                 TEST_ERROR
-                
+
                 city->matrix[random_x_p][random_y_p].request_pid = getpid();
 
                 /* Estraggo coordinate arrivo */
@@ -356,6 +356,8 @@ int main(int argc, char const *argv[])
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
     close_master();
 
+    free(taxi);
+    free(children);
     printf("Master PID:%d : Terminazione completata.\n", getpid());
     exit(EXIT_SUCCESS);
 }
@@ -533,7 +535,7 @@ void signal_handler(int signum)
                 setpgid(fork_value, taxi[0]);
             } while (errno == EINTR);
 
-            TEST_ERROR
+            /*TEST_ERROR*/
 
             break;
         }

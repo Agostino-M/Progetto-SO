@@ -175,7 +175,7 @@ int main(int argc, char const *argv[])
         num_richieste++;
 
         /* Parte il timer SO_TIMEOUT */
-        alarm(3); /* SO_TIMEOUT */
+        alarm(1); /* SO_TIMEOUT */
 
         /* Spostamento verso la destinazione */
         durata_viaggio = 0;
@@ -215,7 +215,7 @@ int create_taxi()
             attempts++;
         }
 
-        if (attempts == 30)
+        if (attempts == 60)
             return -1;
 
     } while (errno == EAGAIN || city->matrix[random_x][random_y].is_hole);
@@ -240,7 +240,7 @@ void alarm_handler(int signum)
 
     else if (signum == SIGALRM)
     {
-        printf("Taxi PID:%d : Timer scaduto...\n", getpid());
+        printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
         kill(getppid(), SIGUSR1);
         close_taxi();
     }

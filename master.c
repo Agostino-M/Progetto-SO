@@ -25,7 +25,7 @@ unsigned int SO_DURATION = 20;
 int flag_timer = 0; /* flag dell'handler del master*/
 
 /* ID dell'IPC del semaforo e` globale */
-int id_sem_cap, id_sem_taxi, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write;
+int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write, cont_taxi = 0;
 struct shared_map *city;
 struct shared_stats *stats;
 pid_t *taxi;
@@ -64,6 +64,15 @@ int main(int argc, char const *argv[])
     /* Creazione array semafori capienza */
     id_sem_cap = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
+
+    /* Creazione array semafori per accede in mutua escl ai contatori in mem condivisa */
+    id_sem_stats = semget(IPC_PRIVATE, 5, IPC_CREAT | IPC_EXCL | 0600);
+    TEST_ERROR
+    for (i = 0; i < 5; i++)
+    {
+        set_sem(id_sem_stats, i, 1);
+        TEST_ERROR
+    }
 
     /* Creazione semaforo scrittura su coda mutex*/
     id_sem_write = semget(IPC_PRIVATE, NUM_RISORSE, IPC_CREAT | IPC_EXCL | 0600);
@@ -252,6 +261,8 @@ int main(int argc, char const *argv[])
         }
     }
 
+    cont_taxi = SO_TAXI;
+
     sleep(2);
     printf("Premi INVIO per continuare.\n");
     getchar();
@@ -321,6 +332,7 @@ int main(int argc, char const *argv[])
      */
     printf("Matrice con le richieste :\n");
     print_resource(id_sem_request);
+
     printf("SO_TOP_CELLS %d celle più attraversate :\n", SO_TOP_CELLS);
     /* matrice con solo le SO_TOP_CELLS celle più attraversate */
 
@@ -354,6 +366,7 @@ void create_taxi_child()
         sid_shd_stats[20],
         sid_msg_queue[20],
         sid_sem_cap[20],
+        sid_sem_stats[20],
         sid_sem_taxi[20],
         sid_sem_request[20];
 
@@ -361,10 +374,11 @@ void create_taxi_child()
     snprintf(sid_shd_stats, 20, "%d", id_shd_stats);
     snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
     snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
+    snprintf(sid_sem_stats, 20, "%d", id_sem_stats);
     snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
     snprintf(sid_sem_request, 20, "%d", id_sem_request);
 
-    execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_taxi, sid_sem_request, NULL);
+    execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_stats, sid_sem_taxi, sid_sem_request, NULL);
     TEST_ERROR
 
     exit(EXIT_FAILURE);
@@ -382,6 +396,8 @@ void close_master()
 
     /* Eliminazione semafori */
     semctl(id_sem_cap, 0, IPC_RMID);
+    TEST_ERROR
+    semctl(id_sem_stats, 0, IPC_RMID);
     TEST_ERROR
     semctl(id_sem_taxi, 0, IPC_RMID);
     TEST_ERROR
@@ -500,7 +516,7 @@ void signal_handler(int signum)
 
         printf("Master : Segnale SIGUSR1 arrivato.. Creo un nuovo taxi\n");
 
-        switch (fork())
+        switch (fork_value = fork())
         {
         case -1:
             TEST_ERROR
@@ -510,9 +526,15 @@ void signal_handler(int signum)
             create_taxi_child();
 
         default:
-            /*setpgid(fork_value, taxi[0]);
-            TEST_ERROR -> error 3 no such process - ESRCH
-            */
+            taxi[cont_taxi] = fork_value;
+            cont_taxi++;
+            do
+            {
+                setpgid(fork_value, taxi[0]);
+            } while (errno == EINTR);
+
+            TEST_ERROR
+
             break;
         }
     }

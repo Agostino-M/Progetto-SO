@@ -92,7 +92,7 @@ void print_status(struct shared_map *mat, int id_sem_cap)
         {
             if (mat->matrix[i][j].is_hole)
             {
-                printf("%2d ", -1);
+                printf("%2d", -1);
             }
             else
             {

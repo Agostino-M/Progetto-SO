@@ -46,17 +46,8 @@ int main(int argc, char const *argv[])
      * sem[4] : Taxi che ha raccolto più richieste
      */
 
-    id_sem_stats = semget(IPC_PRIVATE, 5, IPC_CREAT | IPC_EXCL | 0600);
-    TEST_ERROR
-
-    for (i = 0; i < 5; i++)
-    {
-        set_sem(id_sem_stats, i, 1);
-        TEST_ERROR
-    }
-
     /* Controllo dei parametri ricevuti */
-    if (argc != 7)
+    if (argc != 8)
     {
         fprintf(stderr, "Taxi PID:%d : Numero di parametri errato.\n", getpid());
         exit(EXIT_FAILURE);
@@ -68,15 +59,17 @@ int main(int argc, char const *argv[])
      * - argv[2] = id memoria condivisa stats
      * - argv[3] = id coda di messaggi per le richieste
      * - argv[4] = id semaforo delle capacità massime per taxi su una cella
-     * - argv[5] = id semaforo "wait for zero" che dà il via ai taxi
-     * - argv[6] = id semaforo che indica la presenza di una richiesta
+     * - argv[5] = id semaforo per accedere in mutua escl alla mem condivisa stats
+     * - argv[6] = id semaforo "wait for zero" che dà il via ai taxi
+     * - argv[7] = id semaforo che indica la presenza di una richiesta
      */
     id_shd_mem = atoi(argv[1]);
     id_shd_stats = atoi(argv[2]);
     id_msg_queue = atoi(argv[3]);
     id_sem_cap = atoi(argv[4]);
-    id_sem_taxi = atoi(argv[5]);
-    id_sem_request = atoi(argv[6]);
+    id_sem_stats = atoi(argv[5]);
+    id_sem_taxi = atoi(argv[6]);
+    id_sem_request = atoi(argv[7]);
 
     /* Creazione signal header */
     bzero(&sa, sizeof(struct sigaction));
@@ -182,7 +175,7 @@ int main(int argc, char const *argv[])
         num_richieste++;
 
         /* Parte il timer SO_TIMEOUT */
-        alarm(10); /* SO_TIMEOUT */
+        alarm(3); /* SO_TIMEOUT */
 
         /* Spostamento verso la destinazione */
         durata_viaggio = 0;
@@ -239,16 +232,16 @@ int create_taxi()
 
 void alarm_handler(int signum)
 {
-    if (signum == SIGALRM)
+    if (signum == SIGTERM)
     {
-        printf("Taxi PID:%d : Timer scaduto...\n", getpid());
-        kill(getppid(), SIGUSR1);
+        printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());
         close_taxi();
     }
 
-    else if (signum == SIGTERM)
+    else if (signum == SIGALRM)
     {
-        printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());
+        printf("Taxi PID:%d : Timer scaduto...\n", getpid());
+        kill(getppid(), SIGUSR1);
         close_taxi();
     }
 }
@@ -267,8 +260,6 @@ void close_taxi()
     shmdt(city);
     TEST_ERROR
     shmdt(stats);
-    TEST_ERROR
-    semctl(id_sem_stats, 0, IPC_RMID);
     TEST_ERROR
 
     exit(EXIT_SUCCESS);

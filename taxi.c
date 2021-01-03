@@ -254,8 +254,6 @@ void close_taxi()
     if (doing_request)
         mutex_op(1); /* Viaggio abortito */
 
-    /* Segnalo al master che mi sto ammazzando */
-
     /* Detaching memoria condivisa */
     shmdt(city);
     TEST_ERROR

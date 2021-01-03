@@ -96,7 +96,10 @@ void print_status(struct shared_map *mat, int id_sem_cap)
             }
             else
             {
+                do{
                 sem_value = semctl(id_sem_cap, INDEX(i, j), GETVAL);
+                }while(errno == EINTR);
+                TEST_ERROR
                 printf("%2d ", mat->matrix[i][j].nmax_taxi - sem_value);
             }
         }

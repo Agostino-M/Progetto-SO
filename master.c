@@ -227,7 +227,7 @@ int main(int argc, char const *argv[])
         default:
             children[i] = fork_value;
             setpgid(fork_value, children[0]);
-            /*TEST_ERROR*/
+            TEST_ERROR
             break;
         }
     }
@@ -251,12 +251,17 @@ int main(int argc, char const *argv[])
             break;
 
         case 0:
+            /*taxi[i] = getpid();
+            TEST_ERROR
+            setpgid(taxi[i], taxi[0]);
+            TEST_ERROR*/
             create_taxi_child();
             break;
 
         default:
             taxi[i] = fork_value;
             setpgid(fork_value, taxi[0]);
+            printf("SETPGID error = %d, %s\n", errno, strerror(errno));
             TEST_ERROR
             break;
         }
@@ -309,9 +314,8 @@ int main(int argc, char const *argv[])
         print_status(city, id_sem_cap);
         sleep(1);
         if (errno == EINTR) /*Se la sleep da errore sticazzi*/
-        {
             errno = 0;
-        }
+
         TEST_ERROR
     }
     printf("Master : Timer scaduto.. Il gioco termina.\n");
@@ -326,6 +330,7 @@ int main(int argc, char const *argv[])
 
     do
     {
+
         while (wait(NULL) != -1)
             ;
     } while (errno == EINTR && errno != ECHILD);
@@ -526,16 +531,16 @@ void signal_handler(int signum)
         break;
 
     case SIGUSR1:
-    { 
+    {
         int fork_value, old_errno = 0;
 
-        if(errno == EINTR)
+        if (errno == EINTR)
         {
             printf("OLD ERRNO : %d\n", old_errno);
             old_errno = errno;
             errno = 0;
         }
-        
+
         TEST_ERROR
         printf("Master : Segnale SIGUSR1 arrivato.. Creo un nuovo taxi\n");
 
@@ -552,12 +557,15 @@ void signal_handler(int signum)
         default:
             TEST_ERROR
             taxi[cont_taxi] = getpid();
-            cont_taxi++;
             do
             {
+                if (errno == EINTR)
+                    errno = 0;
+                TEST_ERROR
                 setpgid(taxi[cont_taxi], taxi[0]);
             } while (errno == EINTR);
             TEST_ERROR
+            cont_taxi++;
             break;
         }
 

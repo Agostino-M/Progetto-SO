@@ -36,7 +36,7 @@ int main(int argc, char const *argv[])
     struct msg_request request;
     struct sigaction sa;
     coordinate source_position;
-    int iter, i, j, a, b, found;
+    int iter, i, j, a, b, found, attempt;
 
     /* Array di semafori di mutua esclusione per incremento contatori in mem condivisa
      * sem[0] : Eseguiti con successo
@@ -92,7 +92,7 @@ int main(int argc, char const *argv[])
     /* Semaforo wait for zero */
     wait_sem_zero(id_sem_taxi, 0);
 
-    while (1)
+    while (attempt < 10)
     {
         /* Prelievo richieste con coda */
         printf("Taxi PID:%d : Cerco una richiesta...\n", getpid());
@@ -151,12 +151,13 @@ int main(int argc, char const *argv[])
             if (!found)
             {
                 sleep(3); /* attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
+                attempt++;
                 continue;
             }
 
             else
             {
-
+                attempt = 0;
                 /* Si sposta verso la richiesta più vicina trovata */
                 move(source_position.x, source_position.y);
             }
@@ -190,8 +191,11 @@ int main(int argc, char const *argv[])
         printf("durata_viaggio %ld, strada_fatta %d , num_richieste %d\n", durata_viaggio, strada_fatta, num_richieste);
     }
 
-    /* Fine */
-    return 0;
+    printf("Taxi PID:%d : Non trovo richieste...\n", getpid());
+    printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
+    kill(getppid(), SIGUSR1);
+    TEST_ERROR
+    close_taxi();
 }
 
 int create_taxi()
@@ -234,6 +238,7 @@ void alarm_handler(int signum)
 {
     if (signum == SIGTERM)
     {
+        alarm(0);
         printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());
         close_taxi();
     }
@@ -400,9 +405,9 @@ void move(int x, int y)
 
 void move_up()
 {
-    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
     actual_position.x--;
     dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    rel_sem(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
@@ -413,9 +418,9 @@ void move_up()
 
 void move_down()
 {
-    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
     actual_position.x++;
     dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    rel_sem(id_sem_cap, INDEX(actual_position.x - 1, actual_position.y));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
@@ -426,9 +431,10 @@ void move_down()
 
 void move_left()
 {
-    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+
     actual_position.y--;
     dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y + 1));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;
@@ -439,9 +445,10 @@ void move_left()
 
 void move_right()
 {
-    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+
     actual_position.y++;
     dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
+    rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y - 1));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
     crossing_time.tv_nsec = city->matrix[actual_position.x][actual_position.y].crossing_time;

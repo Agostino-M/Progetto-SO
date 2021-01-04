@@ -241,13 +241,17 @@ void alarm_handler(int signum)
     else if (signum == SIGALRM)
     {
         printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
+        TEST_ERROR
+        printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
         kill(getppid(), SIGUSR1);
+        TEST_ERROR
         close_taxi();
     }
 }
 
 void close_taxi()
 {
+    TEST_ERROR
     rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y)); /* Libera la cella su cui si trovava */
     TEST_ERROR
 

@@ -11,14 +11,14 @@ void close_master();
 void create_taxi_child();
 
 /* Variabili globali */
-unsigned int SO_HOLES = 4;
-unsigned int SO_SOURCES = 10;
+unsigned int SO_HOLES = 10;
+unsigned int SO_SOURCES = 190;
 unsigned int SO_CAP_MIN = 1;
 unsigned int SO_CAP_MAX = 1;
-unsigned int SO_TAXI = 1;
+unsigned int SO_TAXI = 95;
 unsigned int SO_TOP_CELLS = 40;
-unsigned long int SO_TIMENSEC_MIN = 100000000;
-unsigned long int SO_TIMENSEC_MAX = 300000000;
+unsigned long int SO_TIMENSEC_MIN = 10000000;
+unsigned long int SO_TIMENSEC_MAX = 100000000;
 unsigned int SO_TIMEOUT = 1;
 unsigned int SO_DURATION = 20;
 
@@ -48,6 +48,7 @@ int main(int argc, char const *argv[])
     sa.sa_handler = signal_handler;
     sigaction(SIGALRM, &sa, NULL);
     sigaction(SIGUSR1, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 
     /* Creazione memoria condivisa */
     id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0600);
@@ -243,23 +244,20 @@ int main(int argc, char const *argv[])
     /* Creazione taxi */
     for (i = 0; i < SO_TAXI; i++)
     {
-        switch (fork())
+        switch (fork_value = fork())
         {
         case -1:
             TEST_ERROR
             break;
 
         case 0:
-            taxi[i] = getpid();
-            setpgid(getpid(), taxi[0]);
-            TEST_ERROR
             create_taxi_child();
             break;
 
         default:
-            /* taxi[i] = fork_value;
+            taxi[i] = fork_value;
             setpgid(fork_value, taxi[0]);
-            TEST_ERROR */
+            TEST_ERROR
             break;
         }
     }
@@ -310,7 +308,7 @@ int main(int argc, char const *argv[])
         printf("Mappa della città:\n");
         print_status(city, id_sem_cap);
         sleep(1);
-        if(errno == EINTR) /*Se la sleep da errore sticazzi*/
+        if (errno == EINTR) /*Se la sleep da errore sticazzi*/
         {
             errno = 0;
         }
@@ -323,8 +321,15 @@ int main(int argc, char const *argv[])
     kill(-taxi[0], SIGTERM);
 
     /* Attesa terminazione figli */
-    while (wait(NULL) != -1)
-        ;
+
+    /*Aggiungere maschera per i segnali che disturbano il master */
+
+    do
+    {
+        while (wait(NULL) != -1)
+            ;
+    } while (errno == EINTR && errno != ECHILD);
+
     if (errno == ECHILD)
         errno = 0;
     TEST_ERROR
@@ -521,8 +526,16 @@ void signal_handler(int signum)
         break;
 
     case SIGUSR1:
-    {
-        int fork_value;
+    { 
+        int fork_value, old_errno = 0;
+
+        if(errno == EINTR)
+        {
+            printf("OLD ERRNO : %d\n", old_errno);
+            old_errno = errno;
+            errno = 0;
+        }
+        
         TEST_ERROR
         printf("Master : Segnale SIGUSR1 arrivato.. Creo un nuovo taxi\n");
 
@@ -533,19 +546,28 @@ void signal_handler(int signum)
             break;
 
         case 0:
+            create_taxi_child();
+            break;
+
+        default:
             TEST_ERROR
             taxi[cont_taxi] = getpid();
             cont_taxi++;
-            do{
-            setpgid(getpid(), taxi[0]);
-            }while(errno == EINTR);
+            do
+            {
+                setpgid(taxi[cont_taxi], taxi[0]);
+            } while (errno == EINTR);
             TEST_ERROR
-            create_taxi_child();
-
-        default:
             break;
         }
+
+        errno = old_errno;
+        break;
     }
+
+    case SIGTERM:
+        printf("MASTER: Ricevuto SIGTERM\n");
+        break;
     }
 }
 

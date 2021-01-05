@@ -23,6 +23,18 @@ int dec_sem_nw(int sem_id, int index)
     return semop(sem_id, &sops, 1);
 }
 
+void dec_sem_wait(int sem_id, int index, int time)
+{
+    struct timespec timeout;
+    struct sembuf sops;
+    timeout.tv_sec = time;
+    timeout.tv_nsec = 0;
+    sops.sem_num = index;
+    sops.sem_op = -1;
+    sops.sem_flg = 0;
+    semtimedop(sem_id, &sops, 1, &timeout);
+}
+
 void rel_sem(int sem_id, int index)
 {
     struct sembuf sops;

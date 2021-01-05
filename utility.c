@@ -91,8 +91,8 @@ void print_status(struct shared_map *mat, int id_sem_cap)
         for (j = 0; j < SO_WIDTH; j++)
         {
             if (mat->matrix[i][j].is_hole)
-            {
-                printf("  H");
+            { 
+                printf("  H ");
             }
             else
             {
@@ -102,7 +102,7 @@ void print_status(struct shared_map *mat, int id_sem_cap)
                         errno = 0;
                     TEST_ERROR
                     sem_value = semctl(id_sem_cap, INDEX(i, j), GETVAL);
-                    printf("[%d, %d] sem_cap: %d, nmax_taxi: %d\t", i, j, sem_value, mat->matrix[i][j].nmax_taxi);
+                    /*printf("[%d, %d] sem_cap: %d, nmax_taxi: %d\t", i, j, sem_value, mat->matrix[i][j].nmax_taxi);*/
                 } while (errno == EINTR);
                 TEST_ERROR
                 printf("%2d ", mat->matrix[i][j].nmax_taxi - sem_value);

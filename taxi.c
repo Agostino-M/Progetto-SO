@@ -21,6 +21,7 @@ int id_sem_request;
 int id_sem_stats;
 int strada_fatta = 0, num_richieste = 0;
 long durata_viaggio;
+int SO_TIMEOUT = 1; /* CAMBIALOOOOOOO*/
 
 struct shared_map *city;
 struct shared_stats *stats;
@@ -36,7 +37,7 @@ int main(int argc, char const *argv[])
     struct msg_request request;
     struct sigaction sa;
     coordinate source_position;
-    int iter, i, j, a, b, found, attempt;
+    int iter, i, j, a, b, found;
 
     /* Array di semafori di mutua esclusione per incremento contatori in mem condivisa
      * sem[0] : Eseguiti con successo
@@ -92,10 +93,13 @@ int main(int argc, char const *argv[])
     /* Semaforo wait for zero */
     wait_sem_zero(id_sem_taxi, 0);
 
-    while (attempt < 10)
+    while (1)
     {
         /* Prelievo richieste con coda */
         printf("Taxi PID:%d : Cerco una richiesta...\n", getpid());
+
+        /* Parte il timer SO_TIMEOUT */
+        alarm(SO_TIMEOUT); /* SO_TIMEOUT */
 
         /* Verifica se la richiesta si trova nella cella attuale */
         if (dec_sem_nw(id_sem_request, INDEX(actual_position.x, actual_position.y)) != -1)
@@ -151,17 +155,17 @@ int main(int argc, char const *argv[])
             if (!found)
             {
                 sleep(3); /* attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
-                attempt++;
                 continue;
             }
 
             else
             {
-                attempt = 0;
                 /* Si sposta verso la richiesta più vicina trovata */
                 move(source_position.x, source_position.y);
             }
         }
+
+        alarm(0);
 
         msgrcv(id_msg_queue, &request, REQUEST_LENGTH, city->matrix[source_position.x][source_position.y].request_pid, 0);
         TEST_ERROR;
@@ -175,14 +179,9 @@ int main(int argc, char const *argv[])
 
         num_richieste++;
 
-        /* Parte il timer SO_TIMEOUT */
-        alarm(1); /* SO_TIMEOUT */
-
         /* Spostamento verso la destinazione */
         durata_viaggio = 0;
         move(request.end.x, request.end.y);
-
-        alarm(0);
 
         doing_request = 0; /* Richiesta completata */
 
@@ -247,7 +246,7 @@ void alarm_handler(int signum)
     {
         printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
         TEST_ERROR
-        printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
+        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
         kill(getppid(), SIGUSR1);
         TEST_ERROR
         close_taxi();
@@ -405,8 +404,21 @@ void move(int x, int y)
 
 void move_up()
 {
+    dec_sem_wait(id_sem_cap, INDEX(actual_position.x - 1, actual_position.y), SO_TIMEOUT);
+
+    if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
+    {
+        errno = 0;
+        printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
+        TEST_ERROR
+        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        kill(getppid(), SIGUSR1);
+        TEST_ERROR
+        close_taxi();
+    }
+    TEST_ERROR
+
     actual_position.x--;
-    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
     rel_sem(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
@@ -418,8 +430,23 @@ void move_up()
 
 void move_down()
 {
+    TEST_ERROR
+    printf("ID_SEM_CAP : %d   INDEX : %d  SO_TIMEOUT : %d \n", id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
+        dec_sem_wait(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
+
+    if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
+    {
+        errno = 0;
+        printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
+        TEST_ERROR
+        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        kill(getppid(), SIGUSR1);
+        TEST_ERROR
+        close_taxi();
+    }
+    TEST_ERROR
+
     actual_position.x++;
-    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
     rel_sem(id_sem_cap, INDEX(actual_position.x - 1, actual_position.y));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
@@ -431,9 +458,20 @@ void move_down()
 
 void move_left()
 {
+    dec_sem_wait(id_sem_cap, INDEX(actual_position.x, actual_position.y - 1), SO_TIMEOUT);
+    if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
+    {
+        errno = 0;
+        printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
+        TEST_ERROR
+        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        kill(getppid(), SIGUSR1);
+        TEST_ERROR
+        close_taxi();
+    }
+    TEST_ERROR
 
     actual_position.y--;
-    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
     rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y + 1));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;
@@ -445,9 +483,20 @@ void move_left()
 
 void move_right()
 {
+    dec_sem_wait(id_sem_cap, INDEX(actual_position.x, actual_position.y + 1), SO_TIMEOUT);
+    if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
+    {
+        errno = 0;
+        printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
+        TEST_ERROR
+        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        kill(getppid(), SIGUSR1);
+        TEST_ERROR
+        close_taxi();
+    }
+    TEST_ERROR
 
     actual_position.y++;
-    dec_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y));
     rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y - 1));
     TEST_ERROR
     city->matrix[actual_position.x][actual_position.y].crossing_cont++;

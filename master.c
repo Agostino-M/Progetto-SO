@@ -28,19 +28,18 @@ int flag_timer = 0; /* flag dell'handler del master*/
 int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write, cont_taxi = 0;
 struct shared_map *city;
 struct shared_stats *stats;
-pid_t *taxi;
+pid_t *taxi, *children;
 
 int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
-    int cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value, viaggi_inevasi;
-    struct msqid_ds buff;
-    pid_t *children = malloc(SO_SOURCES * sizeof(pid_t));
+    int cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
+
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
     taxi = malloc(NUM_RISORSE * sizeof(pid_t));
-
+    children = malloc(SO_SOURCES * sizeof(pid_t));
     printf("Master PID:%d : Inizializzazione gioco...\n", getpid());
 
     /* Creazione signal handler */
@@ -49,6 +48,7 @@ int main(int argc, char const *argv[])
     sigaction(SIGALRM, &sa, NULL);
     sigaction(SIGUSR1, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
 
     /* Creazione memoria condivisa */
     id_shd_mem = shmget(IPC_PRIVATE, SHARED_MAP_LENGTH, IPC_CREAT | IPC_EXCL | 0600);
@@ -319,15 +319,43 @@ int main(int argc, char const *argv[])
         TEST_ERROR
     }
     printf("Master : Timer scaduto.. Il gioco termina.\n");
+    close_master();
+}
+
+void create_taxi_child()
+{
+    char sid_shd_mem[20],
+        sid_shd_stats[20],
+        sid_msg_queue[20],
+        sid_sem_cap[20],
+        sid_sem_stats[20],
+        sid_sem_taxi[20],
+        sid_sem_request[20];
+
+    snprintf(sid_shd_mem, 20, "%d", id_shd_mem);
+    snprintf(sid_shd_stats, 20, "%d", id_shd_stats);
+    snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
+    snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
+    snprintf(sid_sem_stats, 20, "%d", id_sem_stats);
+    snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
+    snprintf(sid_sem_request, 20, "%d", id_sem_request);
+
+    execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_stats, sid_sem_taxi, sid_sem_request, NULL);
+    TEST_ERROR
+
+    exit(EXIT_FAILURE);
+}
+
+void close_master()
+{
+    struct msqid_ds buff;
+    int viaggi_inevasi;
 
     /* Terminazione figli */
     kill(-children[0], SIGTERM);
     kill(-taxi[0], SIGTERM);
 
     /* Attesa terminazione figli */
-
-    /*Aggiungere maschera per i segnali che disturbano il master */
-
     do
     {
 
@@ -372,40 +400,7 @@ int main(int argc, char const *argv[])
 
     /*Eliminazione IPC */
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
-    close_master();
 
-    free(taxi);
-    free(children);
-    printf("Master PID:%d : Terminazione completata.\n", getpid());
-    exit(EXIT_SUCCESS);
-}
-
-void create_taxi_child()
-{
-    char sid_shd_mem[20],
-        sid_shd_stats[20],
-        sid_msg_queue[20],
-        sid_sem_cap[20],
-        sid_sem_stats[20],
-        sid_sem_taxi[20],
-        sid_sem_request[20];
-
-    snprintf(sid_shd_mem, 20, "%d", id_shd_mem);
-    snprintf(sid_shd_stats, 20, "%d", id_shd_stats);
-    snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
-    snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
-    snprintf(sid_sem_stats, 20, "%d", id_sem_stats);
-    snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
-    snprintf(sid_sem_request, 20, "%d", id_sem_request);
-
-    execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_stats, sid_sem_taxi, sid_sem_request, NULL);
-    TEST_ERROR
-
-    exit(EXIT_FAILURE);
-}
-
-void close_master()
-{
     /* Detaching ed eliminazione memoria condivisa */
     shmdt(city);
     shmctl(id_shd_mem, IPC_RMID, 0);
@@ -429,6 +424,11 @@ void close_master()
     /* Chiusura coda di messaggi */
     msgctl(id_msg_queue, IPC_RMID, NULL);
     TEST_ERROR
+
+    free(taxi);
+    free(children);
+    printf("Master PID:%d : Terminazione completata.\n", getpid());
+    exit(EXIT_SUCCESS);
 }
 
 int create_matrix()
@@ -526,6 +526,10 @@ void signal_handler(int signum)
 
     switch (signum)
     {
+    case SIGINT:
+        close_master();
+        break;
+
     case SIGALRM:
         flag_timer = 1;
         break;

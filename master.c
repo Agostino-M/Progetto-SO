@@ -302,37 +302,6 @@ int main(int argc, char const *argv[])
     close_master();
 }
 
-void create_taxi_child()
-{
-    char sid_shd_mem[20],
-        sid_shd_stats[20],
-        sid_msg_queue[20],
-        sid_sem_cap[20],
-        sid_sem_stats[20],
-        sid_sem_taxi[20],
-        sid_sem_request[20];
-
-    snprintf(sid_shd_mem, 20, "%d", id_shd_mem);
-    snprintf(sid_shd_stats, 20, "%d", id_shd_stats);
-    snprintf(sid_msg_queue, 20, "%d", id_msg_queue);
-    snprintf(sid_sem_cap, 20, "%d", id_sem_cap);
-    snprintf(sid_sem_stats, 20, "%d", id_sem_stats);
-    snprintf(sid_sem_taxi, 20, "%d", id_sem_taxi);
-    snprintf(sid_sem_request, 20, "%d", id_sem_request);
-
-    execlp(FILEPATH, FILEPATH, sid_shd_mem, sid_shd_stats, sid_msg_queue, sid_sem_cap, sid_sem_stats, sid_sem_taxi, sid_sem_request, NULL);
-    TEST_ERROR
-
-    exit(EXIT_FAILURE);
-}
-
-void close_master()
-{
-    struct msqid_ds buff;
-    int viaggi_inevasi;
-
-    close_master();
-}
 
 void create_taxi_child()
 {

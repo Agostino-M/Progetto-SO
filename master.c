@@ -21,7 +21,7 @@ unsigned int SO_TAXI = 1000;
 unsigned int SO_TOP_CELLS = 40;
 unsigned long int SO_TIMENSEC_MIN = 10000000;
 unsigned long int SO_TIMENSEC_MAX = 100000000;
-unsigned int SO_TIMEOUT = 3;
+unsigned int SO_TIMEOUT = 3; /* in taxi */
 unsigned int SO_DURATION = 20;
 
 int cont_taxi = 0;
@@ -305,7 +305,6 @@ int main(int argc, char const *argv[])
     close_master();
 }
 
-
 void create_taxi_child()
 {
     char sid_shd_mem[20],
@@ -512,7 +511,7 @@ void signal_handler(int signum)
     case SIGINT:
         close_master();
         break;
-    
+
     case SIGALRM:
         flag_timer = 1;
         break;

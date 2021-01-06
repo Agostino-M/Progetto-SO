@@ -1,5 +1,6 @@
 #include "sem_lib.h"
 #include "utility.h"
+#include "sem_list.h"
 /*#include "handling.h"/*
 
 /* Prototipi di funzioni */
@@ -9,6 +10,7 @@ void signal_handler(int signum);
 void source_handler(int signum);
 void close_master();
 void create_taxi_child();
+void kill_all_child();
 
 /* Variabili globali */
 unsigned int SO_HOLES = 10;
@@ -28,18 +30,17 @@ int flag_timer = 0; /* flag dell'handler del master*/
 int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write, cont_taxi = 0;
 struct shared_map *city;
 struct shared_stats *stats;
-pid_t *taxi, *children;
+lista_pid *taxi_pid = NULL;
+lista_pid *sources_pid = NULL;
 
 int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
     int cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
-
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
-    taxi = malloc(NUM_RISORSE * sizeof(pid_t));
-    children = malloc(SO_SOURCES * sizeof(pid_t));
+
     printf("Master PID:%d : Inizializzazione gioco...\n", getpid());
 
     /* Creazione signal handler */
@@ -225,8 +226,7 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
         default:
-            children[i] = fork_value;
-            setpgid(fork_value, children[0]);
+            sources_pid = insert(sources_pid, fork_value);
             TEST_ERROR
             break;
         }
@@ -251,23 +251,15 @@ int main(int argc, char const *argv[])
             break;
 
         case 0:
-            /*taxi[i] = getpid();
-            TEST_ERROR
-            setpgid(taxi[i], taxi[0]);
-            TEST_ERROR*/
             create_taxi_child();
             break;
 
         default:
-            taxi[i] = fork_value;
-            setpgid(fork_value, taxi[0]);
-            printf("SETPGID error = %d, %s\n", errno, strerror(errno));
+            taxi_pid = insert(taxi_pid, fork_value);
             TEST_ERROR
             break;
         }
     }
-
-    cont_taxi = SO_TAXI;
 
     sleep(2);
     printf("Premi INVIO per continuare.\n");
@@ -282,18 +274,6 @@ int main(int argc, char const *argv[])
     /* Parte il timer SO_DURATION */
     printf("Master PID:%d : Timer gioco partito - %d sec.\n", getpid(), SO_DURATION);
     alarm(SO_DURATION);
-
-    /*
-     * Invece di sospendere l'esecuzione in attesa che arrivi l'alarm, effettuiamo la stampa ogni secondo 
-     * 
-     * sigemptyset(&my_mask);
-     * sigfillset(&my_mask);
-     * sigdelset(&my_mask, SIGALRM);
-     * sigsuspend(&my_mask);
-     * if (errno == EINTR) /* Gestiamo il valore di ritorno EINTR 
-     * errno = 0;
-     * TEST_ERROR
-    /*
 
     /* Stampa ogni secondo */
     while (flag_timer == 0)
@@ -321,6 +301,7 @@ int main(int argc, char const *argv[])
     printf("Master : Timer scaduto.. Il gioco termina.\n");
     close_master();
 }
+
 
 void create_taxi_child()
 {
@@ -351,9 +332,7 @@ void close_master()
     struct msqid_ds buff;
     int viaggi_inevasi;
 
-    /* Terminazione figli */
-    kill(-children[0], SIGTERM);
-    kill(-taxi[0], SIGTERM);
+    kill_all_child();
 
     /* Attesa terminazione figli */
     do
@@ -425,8 +404,8 @@ void close_master()
     msgctl(id_msg_queue, IPC_RMID, NULL);
     TEST_ERROR
 
-    free(taxi);
-    free(children);
+    free(taxi_pid);
+    free(sources_pid);
     printf("Master PID:%d : Terminazione completata.\n", getpid());
     exit(EXIT_SUCCESS);
 }
@@ -526,10 +505,11 @@ void signal_handler(int signum)
 
     switch (signum)
     {
+
     case SIGINT:
         close_master();
         break;
-
+    
     case SIGALRM:
         flag_timer = 1;
         break;
@@ -540,7 +520,6 @@ void signal_handler(int signum)
 
         if (errno == EINTR)
         {
-            printf("OLD ERRNO : %d\n", old_errno);
             old_errno = errno;
             errno = 0;
         }
@@ -548,7 +527,7 @@ void signal_handler(int signum)
         TEST_ERROR
         printf("Master : Segnale SIGUSR1 arrivato.. Creo un nuovo taxi\n");
 
-        switch (fork())
+        switch (fork_value = fork())
         {
         case -1:
             TEST_ERROR
@@ -560,20 +539,10 @@ void signal_handler(int signum)
 
         default:
             TEST_ERROR
-            taxi[cont_taxi] = getpid();
-            do
-            {
-                if (errno == EINTR)
-                    errno = 0;
-                TEST_ERROR
-                setpgid(taxi[cont_taxi], taxi[0]);
-            } while (errno == EINTR);
+            taxi_pid = insert(taxi_pid, fork_value);
             TEST_ERROR
-            cont_taxi++;
             break;
         }
-
-        errno = old_errno;
         break;
     }
 
@@ -590,5 +559,22 @@ void source_handler(int signum)
     case SIGTERM:
         printf("Source PID:%d SIGTERM rievuto...\n", getpid());
         exit(EXIT_SUCCESS);
+    }
+}
+
+void kill_all_child()
+{
+    lista_pid *p = taxi_pid, *q = sources_pid;
+
+    while (q != NULL)
+    {
+        kill(q->pid, SIGTERM);
+        q = q->next;
+    }
+
+    while (p != NULL)
+    {
+        kill(p->pid, SIGTERM);
+        p = p->next;
     }
 }

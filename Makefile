@@ -6,8 +6,8 @@ TARGET = Master
 TARGET1 = Taxi
 
 # Object files necessari per produrre l'eseguibile
-OBJ = sem_lib.o utility.o master.o
-OBJ1 = sem_lib.o utility.o taxi.o
+OBJ = sem_lib.o sem_list.o utility.o master.o
+OBJ1 = sem_lib.o sem_list.o utility.o taxi.o
 
 HEADLER = sem_lib.h utility.h
 

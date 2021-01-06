@@ -420,7 +420,7 @@ int create_matrix()
     {
         for (j = 0; j < SO_WIDTH; j++)
         {
-            random = rand() % SO_TIMENSEC_MAX + SO_TIMENSEC_MIN;
+            random = rand() % (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN + 1) + SO_TIMENSEC_MIN;
             city->matrix[i][j].crossing_time = random;
             city->matrix[i][j].is_hole = 0;
             city->matrix[i][j].crossing_cont = 0;
@@ -490,7 +490,8 @@ void fill_resource()
             }
             else
             {
-                random = rand() % SO_CAP_MAX + SO_CAP_MIN;
+                random = rand() % (SO_CAP_MAX - SO_CAP_MIN + 1) + SO_CAP_MIN;
+
                 set_sem(id_sem_cap, INDEX(i, j), random);
                 TEST_ERROR
                 city->matrix[i][j].nmax_taxi = random;

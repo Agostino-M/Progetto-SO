@@ -21,7 +21,7 @@ int id_sem_request;
 int id_sem_stats;
 int strada_fatta = 0, num_richieste = 0;
 long durata_viaggio;
-int SO_TIMEOUT = 1; /* CAMBIALOOOOOOO*/
+int SO_TIMEOUT = 3; /* CAMBIALOOOOOOO*/
 
 struct shared_map *city;
 struct shared_stats *stats;
@@ -71,6 +71,7 @@ int main(int argc, char const *argv[])
     id_sem_stats = atoi(argv[5]);
     id_sem_taxi = atoi(argv[6]);
     id_sem_request = atoi(argv[7]);
+    TEST_ERROR
 
     /* Creazione signal header */
     bzero(&sa, sizeof(struct sigaction));
@@ -192,6 +193,7 @@ int main(int argc, char const *argv[])
 
     printf("Taxi PID:%d : Non trovo richieste...\n", getpid());
     printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
+    TEST_ERROR
     kill(getppid(), SIGUSR1);
     TEST_ERROR
     close_taxi();
@@ -246,7 +248,7 @@ void alarm_handler(int signum)
     {
         printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
         TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
         kill(getppid(), SIGUSR1);
         TEST_ERROR
         close_taxi();
@@ -411,7 +413,7 @@ void move_up()
         errno = 0;
         printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
         TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
         kill(getppid(), SIGUSR1);
         TEST_ERROR
         close_taxi();
@@ -432,14 +434,14 @@ void move_down()
 {
     TEST_ERROR
     printf("ID_SEM_CAP : %d   INDEX : %d  SO_TIMEOUT : %d \n", id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
-        dec_sem_wait(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
+    dec_sem_wait(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
 
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
     {
         errno = 0;
         printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
         TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
         kill(getppid(), SIGUSR1);
         TEST_ERROR
         close_taxi();
@@ -464,7 +466,7 @@ void move_left()
         errno = 0;
         printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
         TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
         kill(getppid(), SIGUSR1);
         TEST_ERROR
         close_taxi();
@@ -489,7 +491,7 @@ void move_right()
         errno = 0;
         printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());
         TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+        printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
         kill(getppid(), SIGUSR1);
         TEST_ERROR
         close_taxi();

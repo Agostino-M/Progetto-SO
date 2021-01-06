@@ -380,22 +380,6 @@ void close_master()
            stats->pid_max_viaggio, stats->max_viaggio,
            stats->pid_max_richieste, stats->max_richieste);
 
-    while(sources_pid != NULL)
-    {
-        cont_sources++;
-        sources_pid = sources_pid->next;
-    }
-
-    while(taxi_pid != NULL)
-    {
-        cont_taxi++;
-        taxi_pid = taxi_pid->next;
-    }
-
-    printf("\n\nCONT_SOURCES : %d\n", cont_sources);
-    printf("\n\nCONT_TAXI : %d\n\n", cont_taxi);
-
-
     /*Eliminazione IPC */
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 

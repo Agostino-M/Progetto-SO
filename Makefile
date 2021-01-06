@@ -66,8 +66,9 @@ run: $(TARGET)
 
 # Preset personalizzato secondo le esigenze di andrea :)
 andrea:
-	clear
+	ipcrm -a
 	make clean
+	clear
 	make run
 
 # Compilazione delle librerie

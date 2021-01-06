@@ -13,15 +13,15 @@ void create_taxi_child();
 void kill_all_child();
 
 /* Variabili globali */
-unsigned int SO_HOLES = 10;
-unsigned int SO_SOURCES = 190;
-unsigned int SO_CAP_MIN = 1;
-unsigned int SO_CAP_MAX = 1;
-unsigned int SO_TAXI = 95;
+unsigned int SO_HOLES = 50;
+unsigned int SO_SOURCES = 10;
+unsigned int SO_CAP_MIN = 3;
+unsigned int SO_CAP_MAX = 5;
+unsigned int SO_TAXI = 1000;
 unsigned int SO_TOP_CELLS = 40;
 unsigned long int SO_TIMENSEC_MIN = 10000000;
 unsigned long int SO_TIMENSEC_MAX = 100000000;
-unsigned int SO_TIMEOUT = 1;
+unsigned int SO_TIMEOUT = 3; /* in taxi */
 unsigned int SO_DURATION = 20;
 
 int flag_timer = 0; /* flag dell'handler del master*/
@@ -302,7 +302,6 @@ int main(int argc, char const *argv[])
     close_master();
 }
 
-
 void create_taxi_child()
 {
     char sid_shd_mem[20],
@@ -509,7 +508,7 @@ void signal_handler(int signum)
     case SIGINT:
         close_master();
         break;
-    
+
     case SIGALRM:
         flag_timer = 1;
         break;

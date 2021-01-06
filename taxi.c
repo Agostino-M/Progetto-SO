@@ -21,7 +21,7 @@ int id_sem_request;
 int id_sem_stats;
 int strada_fatta = 0, num_richieste = 0;
 long durata_viaggio;
-int SO_TIMEOUT = 1; /* CAMBIALOOOOOOO*/
+int SO_TIMEOUT = 3; /* CAMBIALOOOOOOO*/
 
 struct shared_map *city;
 struct shared_stats *stats;

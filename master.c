@@ -493,7 +493,7 @@ void fill_resource()
             }
             else
             {
-                random = rand() % (SO_CAP_MAX - SO_CAP_MIN + 1)  + SO_CAP_MIN ;
+                random = rand() % (SO_CAP_MAX - SO_CAP_MIN + 1) + SO_CAP_MIN;
                 set_sem(id_sem_cap, INDEX(i, j), random);
                 TEST_ERROR
                 city->matrix[i][j].nmax_taxi = random;

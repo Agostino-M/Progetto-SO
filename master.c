@@ -13,21 +13,24 @@ void create_taxi_child();
 void kill_all_child();
 
 /* Variabili globali */
-unsigned int SO_HOLES = 10;
-unsigned int SO_SOURCES = 190;
-unsigned int SO_CAP_MIN = 1;
-unsigned int SO_CAP_MAX = 1;
-unsigned int SO_TAXI = 95;
+unsigned int SO_HOLES = 50;
+unsigned int SO_SOURCES = 10;
+unsigned int SO_CAP_MIN = 3;
+unsigned int SO_CAP_MAX = 5;
+unsigned int SO_TAXI = 1000;
 unsigned int SO_TOP_CELLS = 40;
 unsigned long int SO_TIMENSEC_MIN = 10000000;
 unsigned long int SO_TIMENSEC_MAX = 100000000;
-unsigned int SO_TIMEOUT = 1;
+unsigned int SO_TIMEOUT = 3;
 unsigned int SO_DURATION = 20;
+
+int cont_taxi = 0;
+int cont_sources = 0;
 
 int flag_timer = 0; /* flag dell'handler del master*/
 
 /* ID dell'IPC del semaforo e` globale */
-int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write, cont_taxi = 0;
+int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write;
 struct shared_map *city;
 struct shared_stats *stats;
 lista_pid *taxi_pid = NULL;
@@ -377,6 +380,22 @@ void close_master()
            stats->pid_max_viaggio, stats->max_viaggio,
            stats->pid_max_richieste, stats->max_richieste);
 
+    while(sources_pid != NULL)
+    {
+        cont_sources++;
+        sources_pid = sources_pid->next;
+    }
+
+    while(taxi_pid != NULL)
+    {
+        cont_taxi++;
+        taxi_pid = taxi_pid->next;
+    }
+
+    printf("\n\nCONT_SOURCES : %d\n", cont_sources);
+    printf("\n\nCONT_TAXI : %d\n\n", cont_taxi);
+
+
     /*Eliminazione IPC */
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 
@@ -421,7 +440,7 @@ int create_matrix()
     {
         for (j = 0; j < SO_WIDTH; j++)
         {
-            random = rand() % SO_TIMENSEC_MAX + SO_TIMENSEC_MIN;
+            random = rand() % (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN + 1) + SO_TIMENSEC_MIN;
             city->matrix[i][j].crossing_time = random;
             city->matrix[i][j].is_hole = 0;
             city->matrix[i][j].crossing_cont = 0;
@@ -491,7 +510,7 @@ void fill_resource()
             }
             else
             {
-                random = rand() % SO_CAP_MAX + SO_CAP_MIN;
+                random = rand() % (SO_CAP_MAX - SO_CAP_MIN + 1)  + SO_CAP_MIN ;
                 set_sem(id_sem_cap, INDEX(i, j), random);
                 TEST_ERROR
                 city->matrix[i][j].nmax_taxi = random;

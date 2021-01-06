@@ -191,7 +191,7 @@ int main(int argc, char const *argv[])
     }
 
     printf("Taxi PID:%d : Non trovo richieste...\n", getpid());
-    printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());
+    /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
     kill(getppid(), SIGUSR1);
     TEST_ERROR
     close_taxi();
@@ -430,9 +430,7 @@ void move_up()
 
 void move_down()
 {
-    TEST_ERROR
-    printf("ID_SEM_CAP : %d   INDEX : %d  SO_TIMEOUT : %d \n", id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
-        dec_sem_wait(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
+    dec_sem_wait(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
 
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
     {

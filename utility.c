@@ -111,3 +111,18 @@ void print_status(struct shared_map *mat, int id_sem_cap)
     }
     printf("\n");
 }
+
+int min_vet(struct top_cells *vet, int dim)
+{
+    int i, min;
+
+    min = vet[0].attraversamenti;
+
+    for(i = 1; i < dim; i++)
+    {
+        if(min > vet[i].attraversamenti)
+            min = vet[i].attraversamenti;
+    }
+
+    return min;
+}

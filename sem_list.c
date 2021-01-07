@@ -1,29 +1,6 @@
 #include "sem_list.h"
 
-int check(lista_pid *p, pid_t check_pid)
-{
-    int cont = 0;
-    lista_pid *q;
-
-    while (p != NULL)
-    {
-        if (p->pid == check_pid)
-        {
-            return cont;
-        }
-        p = p->next;
-        cont++;
-    }
-
-    return -1;
-}
-
-lista_pid *create_list(void)
-{
-    return NULL;
-}
-
-lista_pid *insert(lista_pid *p, pid_t new_pid)
+lista_pid *insert_pid(lista_pid *p, pid_t new_pid)
 {
     lista_pid *q = malloc(sizeof(lista_pid));
 
@@ -37,7 +14,21 @@ lista_pid *insert(lista_pid *p, pid_t new_pid)
     return q;
 }
 
-lista_pid *delete_pid(lista_pid *head, pid_t value)
+lista_pid *insert_attraversate(lista_pid *p, int num_attraversate)
+{
+    lista_pid *q = malloc(sizeof(lista_pid));
+
+    if (!q)
+    {
+        fprintf(stderr, "Errore allocazione del nuovo elemento\n");
+        exit(-1);
+    }
+    q->attraversate = num_attraversate;
+    q->next = p;
+    return q;
+}
+
+lista_pid *delete_attraversate(lista_pid *head, int num_attraversate)
 {
     lista_pid *p = head, *q;
 
@@ -47,7 +38,7 @@ lista_pid *delete_pid(lista_pid *head, pid_t value)
 
     /*Elemento da cancellare in testa*/
 
-    if (head->pid == value)
+    if (head->attraversate == num_attraversate)
     {
         head = head->next;
         free(p);
@@ -57,7 +48,7 @@ lista_pid *delete_pid(lista_pid *head, pid_t value)
     /*Ciclo alla ricerca dell'elemento con pid == value */
     for (p = head; p->next != NULL; p = p->next)
     {
-        if (p->next->pid == value)
+        if (p->next->attraversate == num_attraversate)
         {
             /*Trovato elemento da cancellare*/
             q = p->next->next;
@@ -81,3 +72,41 @@ void print_list(struct list *q)
     }
 }
 
+void print_list_attraversate(struct list *q)
+{
+    lista_pid *temp = q;
+
+    while (temp != NULL)
+    {
+        printf("%d ", temp->attraversate);
+        temp = temp->next;
+    }
+}
+
+lista_pid *min_node(lista_pid *p)
+{
+    lista_pid *q = p;
+    int min, cont = 0, position = 0, i;
+
+    min = q->attraversate;
+
+    while (q != NULL)
+    {
+        if (min > q->attraversate)
+        {
+            min = q->attraversate;
+            position = cont;
+        }
+        cont++;
+        q = q->next;
+    }
+
+    q = p;
+    
+    for (i = 0; i < position; i++)
+    {
+        q = q->next;
+    }
+
+    return q;
+}

@@ -21,7 +21,7 @@ int id_sem_request;
 int id_sem_stats;
 int strada_fatta = 0, num_richieste = 0;
 long durata_viaggio;
-int SO_TIMEOUT = 3; /* CAMBIALOOOOOOO*/
+int SO_TIMEOUT = 1; /* CAMBIALOOOOOOO*/
 
 struct shared_map *city;
 struct shared_stats *stats;
@@ -433,7 +433,7 @@ void move_up()
 void move_down()
 {
     TEST_ERROR
-    printf("ID_SEM_CAP : %d   INDEX : %d  SO_TIMEOUT : %d \n", id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
+    /*printf("ID_SEM_CAP : %d   INDEX : %d  SO_TIMEOUT : %d \n", id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);*/
     dec_sem_wait(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
 
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/

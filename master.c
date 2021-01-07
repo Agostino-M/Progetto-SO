@@ -11,30 +11,29 @@ void source_handler(int signum);
 void close_master();
 void create_taxi_child();
 void kill_all_child();
+void print_top_cells();
 
 /* Variabili globali */
-unsigned int SO_HOLES = 50;
-unsigned int SO_SOURCES = 10;
-unsigned int SO_CAP_MIN = 3;
-unsigned int SO_CAP_MAX = 5;
-unsigned int SO_TAXI = 1000;
-unsigned int SO_TOP_CELLS = 40;
-unsigned long int SO_TIMENSEC_MIN = 10000000;
-unsigned long int SO_TIMENSEC_MAX = 100000000;
+unsigned int SO_HOLES = 10;
+unsigned int SO_SOURCES = 190;
+unsigned int SO_CAP_MIN = 1;
+unsigned int SO_CAP_MAX = 1;
+unsigned int SO_TAXI = 95;
+unsigned int SO_TOP_CELLS = 10;
+unsigned long int SO_TIMENSEC_MIN = 100000000;
+unsigned long int SO_TIMENSEC_MAX = 300000000;
 unsigned int SO_TIMEOUT = 3; /* in taxi */
 unsigned int SO_DURATION = 20;
-
 int cont_taxi = 0;
 int cont_sources = 0;
-
 int flag_timer = 0; /* flag dell'handler del master*/
-
 /* ID dell'IPC del semaforo e` globale */
 int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write;
 struct shared_map *city;
 struct shared_stats *stats;
 lista_pid *taxi_pid = NULL;
 lista_pid *sources_pid = NULL;
+lista_pid *top_cells = NULL;
 
 int main(int argc, char const *argv[])
 {
@@ -122,12 +121,12 @@ int main(int argc, char const *argv[])
     }
 
     print_matrix(city, 3);
-    print_resource(id_sem_request);
-    print_resource(id_sem_write);
+    /*print_resource(id_sem_request);*/
+    /*print_resource(id_sem_write);*/
 
     /* Inizializzazione del vettore di semafori */
     fill_resource();
-    print_resource(id_sem_cap);
+    /*print_resource(id_sem_cap);*/
 
     printf("Premi INVIO per continuare.\n");
     getchar();
@@ -229,17 +228,15 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
         default:
-            sources_pid = insert(sources_pid, fork_value);
+            sources_pid = insert_pid(sources_pid, fork_value);
             TEST_ERROR
             break;
         }
     }
 
     sleep(10);
-    printf("\n\n");
+    printf("\n\nArray delle richieste\n\n");
     print_resource(id_sem_request);
-    print_resource(id_sem_write);
-    print_matrix(city, 5);
     printf("Premi INVIO per continuare.\n");
     getchar();
 
@@ -258,7 +255,7 @@ int main(int argc, char const *argv[])
             break;
 
         default:
-            taxi_pid = insert(taxi_pid, fork_value);
+            taxi_pid = insert_pid(taxi_pid, fork_value);
             TEST_ERROR
             break;
         }
@@ -267,6 +264,7 @@ int main(int argc, char const *argv[])
     sleep(2);
     printf("Premi INVIO per continuare.\n");
     getchar();
+    
     printf("---------------------Inizio Gioco---------------------\n");
 
     /* Semaforo wait for zero */
@@ -281,18 +279,6 @@ int main(int argc, char const *argv[])
     /* Stampa ogni secondo */
     while (flag_timer == 0)
     {
-        /*
-         * Stampa stato occupazione celle:
-         * - Matrice pid taxi ; Ogni cella ha più taxi ??
-         * - Matrice pid richieste
-         * 
-         * e/o 
-         * 
-         * - Lista di taxi per ogni cella - esempio
-         *   TAXI PID:200 : [20,2]  TAXI PID:206 : [8,16]  TAXI PID:204 : [16,5]
-         *   TAXI PID:202 : [0,1]  TAXI PID:201 : [19,7]  TAXI PID:203: [18,13]
-         *   TAXI PID:205 : [3,12]  TAXI PID:209 : [5,0]  TAXI PID:207 : [0,15]
-         */
         printf("Mappa della città:\n");
         print_status(city, id_sem_cap);
         sleep(1);
@@ -348,22 +334,16 @@ void close_master()
         errno = 0;
     TEST_ERROR
 
-    /*
-     * Stampa carattersitiche finali 
-     * - numero viaggi (eseguiti con successo, inevasi e abortiti)
-     * - la mappa con evidenziate le SO_SOURCES sorgenti e le SO_TOP_CELLS celle più attraversate
-     * - il taxi che:
-     *      1. ha fatto più strada (numero di celle) di tutti
-     *      2. ha fatto il viaggio più lungo come tempo
-     *      3. ha raccolto più richieste
-     */
-    printf("Matrice con le richieste :\n");
-    print_resource(id_sem_request);
+    /* Stampa carattersitiche finali  */
+
+    /*printf("Matrice con le richieste :\n");*/
+    /*print_resource(id_sem_request);*/
 
     printf("SO_TOP_CELLS %d celle più attraversate :\n", SO_TOP_CELLS);
-    /* matrice con solo le SO_TOP_CELLS celle più attraversate */
 
-    /* Prelievo viaggi inevase */
+    print_top_cells();
+
+    /* Prelievo viaggi inevasi */
     msgctl(id_msg_queue, IPC_STAT, &buff);
     viaggi_inevasi = buff.msg_qnum;
 
@@ -425,6 +405,7 @@ int create_matrix()
         {
             random = rand() % (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN + 1) + SO_TIMENSEC_MIN;
             city->matrix[i][j].crossing_time = random;
+            city->matrix[i][j].is_top = 0;
             city->matrix[i][j].is_hole = 0;
             city->matrix[i][j].crossing_cont = 0;
             city->matrix[i][j].request_pid = 0;
@@ -541,7 +522,7 @@ void signal_handler(int signum)
 
         default:
             TEST_ERROR
-            taxi_pid = insert(taxi_pid, fork_value);
+            taxi_pid = insert_pid(taxi_pid, fork_value);
             TEST_ERROR
             break;
         }
@@ -579,4 +560,60 @@ void kill_all_child()
         kill(p->pid, SIGTERM);
         p = p->next;
     }
+}
+
+void print_top_cells()
+{
+    int i, j, z = 0;
+    lista_pid *nodo_min, *q;
+
+    /*Inserisco i primi SO_TOP_CELLS*/
+
+    for (i = 0; i < SO_TOP_CELLS; i++)
+    {
+        top_cells = insert_attraversate(top_cells, -1);
+    }
+
+    for (i = 0; i < SO_HEIGHT; i++)
+    {
+        for (j = 0; j < SO_WIDTH; j++)
+        {
+            nodo_min = min_node(top_cells);
+            if (nodo_min->attraversate < city->matrix[i][j].crossing_cont)
+            {
+                /*Elimino il nodo minimo e inserisco quello appena letto dalla matrice*/
+                top_cells = delete_attraversate(top_cells, nodo_min->attraversate);
+                top_cells = insert_attraversate(top_cells, city->matrix[i][j].crossing_cont);
+                /*Salvo anche le coordinate del nuovo nodo di top_cells*/
+                top_cells->posizione.x = i;
+                top_cells->posizione.y = j;
+            }
+        }
+    }
+
+    while (top_cells != NULL)
+    {
+        city->matrix[top_cells->posizione.x][top_cells->posizione.y].is_top = 1;
+        top_cells = top_cells->next;
+    }
+
+    printf("\n");
+
+    for (i = 0; i < SO_HEIGHT; i++)
+    {
+        for (j = 0; j < SO_WIDTH; j++)
+        {
+            if (city->matrix[i][j].is_top)
+            {
+                printf("%2d ", city->matrix[i][j].crossing_cont);
+            }
+            else
+            {
+                printf(" . ");
+            }
+        }
+        printf("\n");
+    }
+
+    printf("\n");
 }

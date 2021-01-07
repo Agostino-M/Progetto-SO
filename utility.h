@@ -17,8 +17,8 @@
 #include <time.h>
 #include <math.h>
 #define FILEPATH "./Taxi"
-#define SO_WIDTH 60
-#define SO_HEIGHT 20
+#define SO_WIDTH 20
+#define SO_HEIGHT 10
 #define NUM_RISORSE SO_WIDTH *SO_HEIGHT
 #define QUARTIERE 3
 #define INDEX(x, y) (((x) * (SO_WIDTH)) + (y))
@@ -57,6 +57,7 @@ typedef struct
     int nmax_taxi;
     int is_hole;
     int crossing_cont;
+    int is_top;
     pid_t request_pid;
 } cell;
 
@@ -75,6 +76,12 @@ struct shared_stats
     pid_t pid_max_viaggio;
     int max_richieste;
     pid_t pid_max_richieste;
+};
+
+struct top_cells
+{
+    int attraversamenti;
+    coordinate posizione;
 };
 
 #define SHARED_MAP_LENGTH (sizeof(struct shared_map))
@@ -98,5 +105,7 @@ void print_resource(int id_sem);
 void print_matrix(struct shared_map *mat, int field);
 
 void print_status(struct shared_map *mat, int id_sem_cap);
+
+int min_vet(struct top_cells *vet, int dim);
 
 #endif /* UTILITY_H */

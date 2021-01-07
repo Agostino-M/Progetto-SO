@@ -19,7 +19,7 @@ unsigned int SO_SOURCES = 190;
 unsigned int SO_CAP_MIN = 1;
 unsigned int SO_CAP_MAX = 1;
 unsigned int SO_TAXI = 95;
-unsigned int SO_TOP_CELLS = 10;
+unsigned int SO_TOP_CELLS = 40;
 unsigned long int SO_TIMENSEC_MIN = 100000000;
 unsigned long int SO_TIMENSEC_MAX = 300000000;
 unsigned int SO_TIMEOUT = 3; /* in taxi */
@@ -38,7 +38,7 @@ lista_pid *top_cells = NULL;
 int main(int argc, char const *argv[])
 {
     /* Dichiarazione variabili */
-    int cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value;
+    int cond, i, random_x_p, random_y_p, random_x_a, random_y_a, random_request, fork_value, stop_print = 0;
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
@@ -130,7 +130,7 @@ int main(int argc, char const *argv[])
 
     printf("Premi INVIO per continuare.\n");
     getchar();
-    printf("---------------------Creazione Richieste---------------------\n");
+    printf(ANSI_COLOR_GREEN "---------------------Creazione Richieste---------------------\n" ANSI_COLOR_RESET);
 
     /* Creazione richieste */
     for (i = 0; i < SO_SOURCES; i++)
@@ -144,14 +144,16 @@ int main(int argc, char const *argv[])
         case 0:
         {
             struct sembuf sops[2];
+            int stop_print = 0;
 
             /* Creazione signal header */
             bzero(&sa, sizeof(struct sigaction));
             sa.sa_handler = source_handler;
             sigaction(SIGALRM, &sa, NULL);
             sigaction(SIGTERM, &sa, NULL);
-
             srand(getpid());
+
+            printf("Source PID:%d \n", getpid());
 
             while (1)
             {
@@ -202,15 +204,15 @@ int main(int argc, char const *argv[])
                 request.start.y = random_y_p;
                 request.end.x = random_x_a;
                 request.end.y = random_y_a;
-                printf("Source PID:%d : Nuova richiesta creata: \n"
+
+                /*printf("Source PID:%d : Nuova richiesta creata: \n"
                        "- Partenza x : %d\n"
                        "- Partenza y : %d \n"
                        "- Arrivo x : %d \n"
                        "- Arrivo y : %d\n",
-                       getpid(), request.start.x, request.start.y, request.end.x, request.end.y);
+                       getpid(), request.start.x, request.start.y, request.end.x, request.end.y);*/
 
                 /* Semaforo di mutua esclusione per la scrittura su coda */
-
                 msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
                 TEST_ERROR
 
@@ -234,7 +236,7 @@ int main(int argc, char const *argv[])
         }
     }
 
-    sleep(10);
+    sleep(1);
     printf("\n\nArray delle richieste\n\n");
     print_resource(id_sem_request);
     printf("Premi INVIO per continuare.\n");
@@ -251,6 +253,7 @@ int main(int argc, char const *argv[])
             break;
 
         case 0:
+            printf("Taxi PID:%d\n", getpid());
             create_taxi_child();
             break;
 
@@ -262,10 +265,10 @@ int main(int argc, char const *argv[])
     }
 
     sleep(2);
-    printf("Premi INVIO per continuare.\n");
-    getchar();
-    
-    printf("---------------------Inizio Gioco---------------------\n");
+    /*printf("Premi INVIO per continuare.\n");
+    getchar();*/
+
+    printf(ANSI_COLOR_GREEN"---------------------Inizio Gioco---------------------\n"ANSI_COLOR_RESET);
 
     /* Semaforo wait for zero */
     printf("Master PID:%d : Rilascio il semaforo per i taxi...\n", getpid());
@@ -282,12 +285,12 @@ int main(int argc, char const *argv[])
         printf("Mappa della città:\n");
         print_status(city, id_sem_cap);
         sleep(1);
-        if (errno == EINTR) /*Se la sleep da errore sticazzi*/
+        if (errno == EINTR) /*La sleep viene interrotta da SIGUSR*/
             errno = 0;
 
         TEST_ERROR
     }
-    printf("Master : Timer scaduto.. Il gioco termina.\n");
+    printf(ANSI_COLOR_RED"Master : Timer scaduto.. Il gioco termina.\n\n"ANSI_COLOR_RESET);
     close_master();
 }
 
@@ -388,6 +391,7 @@ void close_master()
 
     free(taxi_pid);
     free(sources_pid);
+    free(top_cells);
     printf("Master PID:%d : Terminazione completata.\n", getpid());
     exit(EXIT_SUCCESS);
 }
@@ -508,7 +512,7 @@ void signal_handler(int signum)
         }
 
         TEST_ERROR
-        printf("Master : Segnale SIGUSR1 arrivato.. Creo un nuovo taxi\n");
+        /*printf("Master : Segnale SIGUSR1 arrivato.. Creo un nuovo taxi\n");*/
 
         switch (fork_value = fork())
         {
@@ -530,7 +534,7 @@ void signal_handler(int signum)
     }
 
     case SIGTERM:
-        printf("MASTER: Ricevuto SIGTERM\n");
+        /*printf("MASTER: Ricevuto SIGTERM\n");*/
         break;
     }
 }
@@ -540,7 +544,7 @@ void source_handler(int signum)
     switch (signum)
     {
     case SIGTERM:
-        printf("Source PID:%d SIGTERM rievuto...\n", getpid());
+        /*printf("Source PID:%d SIGTERM rievuto...\n", getpid());*/
         exit(EXIT_SUCCESS);
     }
 }

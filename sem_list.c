@@ -102,7 +102,7 @@ lista_pid *min_node(lista_pid *p)
     }
 
     q = p;
-    
+
     for (i = 0; i < position; i++)
     {
         q = q->next;

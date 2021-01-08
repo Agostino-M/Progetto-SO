@@ -91,7 +91,7 @@ void print_status(struct shared_map *mat, int id_sem_cap)
         for (j = 0; j < SO_WIDTH; j++)
         {
             if (mat->matrix[i][j].is_hole)
-            { 
+            {
                 printf(" H ");
             }
             else
@@ -118,9 +118,9 @@ int min_vet(struct top_cells *vet, int dim)
 
     min = vet[0].attraversamenti;
 
-    for(i = 1; i < dim; i++)
+    for (i = 1; i < dim; i++)
     {
-        if(min > vet[i].attraversamenti)
+        if (min > vet[i].attraversamenti)
             min = vet[i].attraversamenti;
     }
 

@@ -4,7 +4,6 @@
 
 #include "utility.h"
 
-
 struct list
 {
     pid_t pid;

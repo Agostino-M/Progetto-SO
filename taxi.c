@@ -21,7 +21,7 @@ int id_sem_request;
 int id_sem_stats;
 int strada_fatta = 0, num_richieste = 0;
 long durata_viaggio;
-int SO_TIMEOUT = 1; /* CAMBIALOOOOOOO*/
+int SO_TIMEOUT;
 
 struct shared_map *city;
 struct shared_stats *stats;
@@ -38,6 +38,27 @@ int main(int argc, char const *argv[])
     struct sigaction sa;
     coordinate source_position;
     int iter, i, j, a, b, found;
+    char *temp;
+    FILE *fp;
+
+    if ((temp = getenv("SO_TIMEOUT")) == NULL)
+    {
+        if ((fp = fopen(INPUT_FILENAME, "r")) == NULL)
+        {
+            fprintf(stderr, "Taxi PID:%d : Errore nell'apertura del file, %d, %s", getpid(), errno, strerror(errno));
+            kill(getppid(), SIGUSR1);
+            TEST_ERROR
+            exit(EXIT_FAILURE);
+        }
+
+        fscanf(fp, "%*s = %d", &SO_TIMEOUT);
+
+        if (fclose(fp))
+            fprintf(stderr, "Taxi PID:%d : Errore nell'apertura del file, %d, %s", getpid(), errno, strerror(errno));
+    }
+    else
+        SO_TIMEOUT = atoi(temp);
+    TEST_ERROR
 
     /* Array di semafori di mutua esclusione per incremento contatori in mem condivisa
      * sem[0] : Eseguiti con successo
@@ -95,7 +116,7 @@ int main(int argc, char const *argv[])
     while (1)
     {
         /* Prelievo richieste con coda */
-        
+
         /*printf("Taxi PID:%d : Cerco una richiesta...\n", getpid());*/
 
         /* Parte il timer SO_TIMEOUT */
@@ -187,7 +208,7 @@ int main(int argc, char const *argv[])
 
         /* Segnalo che ho completato la richiesta */
         mutex_op(0);
-       /* printf("durata_viaggio %ld, strada_fatta %d , num_richieste %d\n", durata_viaggio, strada_fatta, num_richieste);*/
+        /* printf("durata_viaggio %ld, strada_fatta %d , num_richieste %d\n", durata_viaggio, strada_fatta, num_richieste);*/
     }
 
     /*printf("Taxi PID:%d : Non trovo richieste...\n", getpid());
@@ -411,11 +432,11 @@ void move_up()
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
     {
         errno = 0;
-        /*printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());*/
         TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
+
         kill(getppid(), SIGUSR1);
         TEST_ERROR
+
         close_taxi();
     }
     TEST_ERROR
@@ -432,7 +453,6 @@ void move_up()
 
 void move_down()
 {
-    TEST_ERROR
     /*printf("ID_SEM_CAP : %d   INDEX : %d  SO_TIMEOUT : %d \n", id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);*/
     dec_sem_wait(id_sem_cap, INDEX(actual_position.x + 1, actual_position.y), SO_TIMEOUT);
 

@@ -14,16 +14,16 @@ void kill_all_child();
 void print_top_cells();
 
 /* Variabili globali */
-unsigned int SO_HOLES = 10;
-unsigned int SO_SOURCES = 190;
-unsigned int SO_CAP_MIN = 1;
-unsigned int SO_CAP_MAX = 1;
-unsigned int SO_TAXI = 95;
-unsigned int SO_TOP_CELLS = 40;
-unsigned long int SO_TIMENSEC_MIN = 100000000;
-unsigned long int SO_TIMENSEC_MAX = 300000000;
-unsigned int SO_TIMEOUT = 3; /* in taxi */
-unsigned int SO_DURATION = 20;
+int SO_HOLES;
+int SO_SOURCES;
+int SO_CAP_MIN;
+int SO_CAP_MAX;
+int SO_TAXI;
+int SO_TOP_CELLS;
+long SO_TIMENSEC_MIN;
+long SO_TIMENSEC_MAX;
+int SO_TIMEOUT;
+int SO_DURATION;
 int cont_taxi = 0;
 int cont_sources = 0;
 int flag_timer = 0; /* flag dell'handler del master*/
@@ -42,6 +42,44 @@ int main(int argc, char const *argv[])
     sigset_t my_mask;
     struct msg_request request;
     struct sigaction sa;
+    char *temp;
+    FILE *fp;
+
+    if ((fp = fopen(INPUT_FILENAME, "r")) == NULL)
+    {
+        fprintf(stderr, "Master PID:%d : Errore nell'apertura del file, %d, %s", getpid(), errno, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    fscanf(fp, "%*s = %d", &SO_TIMEOUT);
+    printf("SO_TIMETOUT: %d\n", SO_TIMEOUT);
+
+    fscanf(fp, "%*s = %d", &SO_HOLES);
+    printf("SO_HOLES: %d\n", SO_HOLES);
+
+    fscanf(fp, "%*s = %d", &SO_SOURCES);
+    printf("SO_SOURCES: %d\n", SO_SOURCES);
+
+    fscanf(fp, "%*s = %d", &SO_CAP_MAX);
+    printf("SO_CAP_MAX: %d\n", SO_CAP_MAX);
+
+    fscanf(fp, "%*s = %d", &SO_CAP_MIN);
+    printf("SO_CAP_MIN: %d\n", SO_CAP_MIN);
+
+    fscanf(fp, "%*s = %d", &SO_TAXI);
+    printf("SO_TAXI: %d\n", SO_TAXI);
+
+    fscanf(fp, "%*s = %d", &SO_TOP_CELLS);
+    printf("SO_TOP_CELLS: %d\n", SO_TOP_CELLS);
+
+    fscanf(fp, "%*s = %ld", &SO_TIMENSEC_MIN);
+    printf("SO_TIMENSEC_MIN: %ld\n", SO_TIMENSEC_MIN);
+
+    fscanf(fp, "%*s = %ld", &SO_TIMENSEC_MAX);
+    printf("SO_TIMENSEC_MAX: %ld\n", SO_TIMENSEC_MAX);
+
+    if (fclose(fp))
+        fprintf(stderr, "Master PID:%d : Errore nell'apertura del file, %d, %s", getpid(), errno, strerror(errno));
 
     printf("Master PID:%d : Inizializzazione gioco...\n", getpid());
 
@@ -237,7 +275,7 @@ int main(int argc, char const *argv[])
     }
 
     sleep(1);
-    printf("\n\nArray delle richieste\n\n");
+    printf("\nArray delle richieste\n\n");
     print_resource(id_sem_request);
     printf("Premi INVIO per continuare.\n");
     getchar();
@@ -265,10 +303,10 @@ int main(int argc, char const *argv[])
     }
 
     sleep(2);
-    /*printf("Premi INVIO per continuare.\n");
-    getchar();*/
+    printf("Premi INVIO per continuare.\n");
+    getchar();
 
-    printf(ANSI_COLOR_GREEN"---------------------Inizio Gioco---------------------\n"ANSI_COLOR_RESET);
+    printf(ANSI_COLOR_GREEN "---------------------Inizio Gioco---------------------\n" ANSI_COLOR_RESET);
 
     /* Semaforo wait for zero */
     printf("Master PID:%d : Rilascio il semaforo per i taxi...\n", getpid());
@@ -290,7 +328,7 @@ int main(int argc, char const *argv[])
 
         TEST_ERROR
     }
-    printf(ANSI_COLOR_RED"Master : Timer scaduto.. Il gioco termina.\n\n"ANSI_COLOR_RESET);
+    printf(ANSI_COLOR_RED "Master : Timer scaduto.. Il gioco termina.\n\n" ANSI_COLOR_RESET);
     close_master();
 }
 
@@ -399,7 +437,7 @@ void close_master()
 int create_matrix()
 {
     int i, j, z, i_holes, j_holes, hole_inseriti = 0, cond = 1, attempts = 0;
-    unsigned long int random;
+    long int random;
 
     srand(getpid());
 

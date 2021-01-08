@@ -78,6 +78,9 @@ int main(int argc, char const *argv[])
     fscanf(fp, "%*s = %ld", &SO_TIMENSEC_MAX);
     printf("SO_TIMENSEC_MAX: %ld\n", SO_TIMENSEC_MAX);
 
+    fscanf(fp, "%*s = %d", &SO_DURATION);
+    printf("SO_DURATION: %d\n", SO_DURATION);
+
     if (fclose(fp))
         fprintf(stderr, "Master PID:%d : Errore nell'apertura del file, %d, %s", getpid(), errno, strerror(errno));
 

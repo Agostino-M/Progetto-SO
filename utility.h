@@ -18,7 +18,7 @@
 #include <math.h>
 #define FILEPATH "./Taxi"
 #define INPUT_FILENAME "./input.txt"
-#define SO_WIDTH 20
+#define SO_WIDTH 10
 #define SO_HEIGHT 10
 #define NUM_RISORSE SO_WIDTH *SO_HEIGHT
 #define QUARTIERE 3

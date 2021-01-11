@@ -175,7 +175,7 @@ int main(int argc, char const *argv[])
 
             if (!found)
             {
-                /*sleep(3); attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
+                sleep(1); /*attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
                 continue;
             }
 
@@ -208,7 +208,7 @@ int main(int argc, char const *argv[])
 
         /* Segnalo che ho completato la richiesta */
         mutex_op(0);
-        /* printf("durata_viaggio %ld, strada_fatta %d , num_richieste %d\n", durata_viaggio, strada_fatta, num_richieste);*/
+        /*printf("durata_viaggio %ld, strada_fatta %d , num_richieste %d\n", durata_viaggio, strada_fatta, num_richieste);*/
     }
 
     /*printf("Taxi PID:%d : Non trovo richieste...\n", getpid());

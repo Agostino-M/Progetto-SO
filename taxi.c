@@ -107,14 +107,20 @@ int main(int argc, char const *argv[])
     TEST_ERROR
 
     /* Creazione in posizione casuale */
-    if (create_taxi() == -1)
+    if (create_taxi() == -1){
         fprintf(stderr, "Taxi PID:%d : Impossibile effettuare la creazione.\n", getpid());
+        exit(EXIT_FAILURE);
+    }
 
+    TEST_ERROR
     /* Semaforo wait for zero */
+    dec_sem(id_sem_taxi, 0);
     wait_sem_zero(id_sem_taxi, 0);
+    TEST_ERROR
 
     while (1)
     {
+        TEST_ERROR
         /* Prelievo richieste con coda */
 
         /*printf("Taxi PID:%d : Cerco una richiesta...\n", getpid());*/
@@ -211,10 +217,6 @@ int main(int argc, char const *argv[])
         /*printf("durata_viaggio %ld, strada_fatta %d , num_richieste %d\n", durata_viaggio, strada_fatta, num_richieste);*/
     }
 
-    /*printf("Taxi PID:%d : Non trovo richieste...\n", getpid());
-    printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
-    TEST_ERROR
-    kill(getppid(), SIGUSR1);
     TEST_ERROR
     close_taxi();
 }
@@ -222,6 +224,7 @@ int main(int argc, char const *argv[])
 int create_taxi()
 {
     int random_x, random_y, attempts = 0;
+    TEST_ERROR
 
     srand(getpid());
 
@@ -234,6 +237,7 @@ int create_taxi()
         random_x = rand() % SO_HEIGHT;
         random_y = rand() % SO_WIDTH;
 
+
         if (!city->matrix[random_x][random_y].is_hole)
         {
             dec_sem_nw(id_sem_cap, INDEX(random_x, random_y));
@@ -245,6 +249,8 @@ int create_taxi()
             */
 
     } while (errno == EAGAIN || city->matrix[random_x][random_y].is_hole);
+
+    TEST_ERROR
 
     /* Aggiorno le posizioni attuali del taxi */
     actual_position.x = random_x;
@@ -261,23 +267,18 @@ void alarm_handler(int signum)
     if (signum == SIGTERM)
     {
         alarm(0);
-        /*printf("Taxi PID:%d : SIGTERM ricevuto...\n", getpid());*/
         close_taxi();
     }
 
     else if (signum == SIGALRM)
     {
-        /*printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());*/
-        TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
-        kill(getppid(), SIGUSR1);
-        TEST_ERROR
         close_taxi();
     }
 }
 
 void close_taxi()
 {
+    int status = getpid();
     TEST_ERROR
     rel_sem(id_sem_cap, INDEX(actual_position.x, actual_position.y)); /* Libera la cella su cui si trovava */
     TEST_ERROR
@@ -290,8 +291,7 @@ void close_taxi()
     TEST_ERROR
     shmdt(stats);
     TEST_ERROR
-
-    exit(EXIT_SUCCESS);
+    exit(status);
 }
 
 void move(int x, int y)
@@ -432,11 +432,6 @@ void move_up()
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
     {
         errno = 0;
-        TEST_ERROR
-
-        kill(getppid(), SIGUSR1);
-        TEST_ERROR
-
         close_taxi();
     }
     TEST_ERROR
@@ -459,11 +454,6 @@ void move_down()
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
     {
         errno = 0;
-        /*printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());*/
-        TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
-        kill(getppid(), SIGUSR1);
-        TEST_ERROR
         close_taxi();
     }
     TEST_ERROR
@@ -484,11 +474,6 @@ void move_left()
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
     {
         errno = 0;
-        /*printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());*/
-        TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
-        kill(getppid(), SIGUSR1);
-        TEST_ERROR
         close_taxi();
     }
     TEST_ERROR
@@ -509,11 +494,6 @@ void move_right()
     if (errno == EAGAIN) /*Scaduto SO_TIMEOUT*/
     {
         errno = 0;
-        /*printf("Taxi PID:%d : Timer SO_TIMEOUT scaduto...\n", getpid());*/
-        TEST_ERROR
-        /*printf("PROVO A INVIARE SIGUSR1 a : %d\n", getppid());*/
-        kill(getppid(), SIGUSR1);
-        TEST_ERROR
         close_taxi();
     }
     TEST_ERROR

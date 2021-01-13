@@ -1,7 +1,6 @@
 #include "sem_lib.h"
 #include "utility.h"
 #include "sem_list.h"
-/*#include "handling.h"/*
 
 /* Prototipi di funzioni */
 int create_matrix();
@@ -14,26 +13,20 @@ void create_taxi_child();
 void kill_all_child();
 void print_top_cells();
 
-/* Variabili globali */
-int SO_HOLES;
-int SO_SOURCES;
-int SO_CAP_MIN;
-int SO_CAP_MAX;
-int SO_TAXI;
-int SO_TOP_CELLS;
-long SO_TIMENSEC_MIN;
-long SO_TIMENSEC_MAX;
-int SO_TIMEOUT;
-int SO_DURATION;
-int cont_taxi = 0;
-int cont_sources = 0;
-int flag_timer = 0; /* flag dell'handler del master*/
-int stop_create = 0;
-/* ID dell'IPC del semaforo e` globale */
+/* Variabili di gioco */
+int SO_HOLES, SO_SOURCES, SO_CAP_MIN, SO_CAP_MAX, SO_TAXI, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION;
+long SO_TIMENSEC_MIN, SO_TIMENSEC_MAX;
+/* Contatori */
+int cont_taxi = 0, cont_sources = 0;
+/* Flag per handler */
+int flag_timer = 0, stop_create = 0;
+/* ID IPC */
 int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write;
+/* Strutture condivise */
 struct shared_map *city;
 struct shared_stats *stats;
 struct msg_request request;
+/* Liste linkate */
 lista_pid *taxi_pid = NULL;
 lista_pid *sources_pid = NULL;
 lista_pid *top_cells = NULL;
@@ -91,9 +84,7 @@ int main(int argc, char const *argv[])
     /* Creazione signal handler */
     bzero(&sa, sizeof(struct sigaction));
     sa.sa_handler = signal_handler;
-    /*sa.sa_flags = SA_NODEFER;*/
     sigaction(SIGALRM, &sa, NULL);
-    /*sigaction(SIGUSR1, &sa, NULL);*/
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
 
@@ -153,27 +144,24 @@ int main(int argc, char const *argv[])
     /* Creazione matrice */
     if (SO_HOLES > (ceil(SO_HEIGHT / 2.0) * ceil(SO_WIDTH / 2.0)))
     {
-        fprintf(stderr, "Master : impossibile creare la matrice con questi parametri\n");
+        fprintf(stderr, ANSI_COLOR_RED "Master : impossibile creare la matrice con questi parametri\n" ANSI_COLOR_RESET);
         exit(EXIT_FAILURE);
     }
-    else
+
+    do
     {
-        do
-        {
-            cond = create_matrix();
-        } while (cond != 0);
-    }
+        cond = create_matrix();
+    } while (cond != 0);
 
     print_matrix(city, 3);
 
     /* Inizializzazione del vettore di semafori */
     fill_resource();
-    /*print_resource(id_sem_cap);*/
 
     printf("Premi INVIO per continuare.\n");
     getchar();
-    printf(ANSI_COLOR_GREEN "---------------------Creazione Richieste---------------------\n" ANSI_COLOR_RESET);
 
+    printf(ANSI_COLOR_GREEN "---------------------Creazione Richieste---------------------\n" ANSI_COLOR_RESET);
     /* Creazione richieste */
     for (i = 0; i < SO_SOURCES; i++)
     {
@@ -207,8 +195,6 @@ int main(int argc, char const *argv[])
                 sigdelset(&my_mask, SIGALRM);
                 sigdelset(&my_mask, SIGTERM);
                 sigsuspend(&my_mask);
-
-                /* Gestiamo il valore di ritorno EINTR*/
                 if (errno == EINTR)
                 {
                     errno = 0;
@@ -248,13 +234,6 @@ int main(int argc, char const *argv[])
                 request.end.x = random_x_a;
                 request.end.y = random_y_a;
 
-                /*printf("Source PID:%d : Nuova richiesta creata: \n"
-                       "- Partenza x : %d\n"
-                       "- Partenza y : %d \n"
-                       "- Arrivo x : %d \n"
-                       "- Arrivo y : %d\n",
-                       getpid(), request.start.x, request.start.y, request.end.x, request.end.y);*/
-
                 msgsnd(id_msg_queue, &request, REQUEST_LENGTH, 0);
                 TEST_ERROR
 
@@ -267,10 +246,9 @@ int main(int argc, char const *argv[])
                         errno = 0;
                     TEST_ERROR
                     wait_sem_zero(id_sem_request, INDEX(request.start.x, request.start.y));
-                } while (errno == EINTR); 
+                } while (errno == EINTR);
 
-
-                /*Fine sezione critica*/
+                /* Fine sezione critica */
                 rel_sem(id_sem_write, INDEX(request.start.x, request.start.y));
                 TEST_ERROR
             }
@@ -284,14 +262,13 @@ int main(int argc, char const *argv[])
         }
     }
 
-    sleep(6); /*sleep per visualizzare l'array delle richieste completo*/
+    sleep(3); /* sleep per visualizzare l'array delle richieste completo */
     printf("\nArray delle richieste\n\n");
-    /*print_resource(id_sem_request);*/
     print_matrix(city, 5);
     printf("Premi INVIO per continuare.\n");
     getchar();
 
-    printf("---------------------Creazione Taxi---------------------\n");
+    printf(ANSI_COLOR_GREEN "---------------------Creazione Taxi---------------------\n" ANSI_COLOR_RESET);
     /* Creazione taxi */
     for (i = 0; i < SO_TAXI; i++)
     {
@@ -313,16 +290,11 @@ int main(int argc, char const *argv[])
         }
     }
 
-    /*sleep(2);*/
-    /*printf("Premi INVIO per continuare.\n");
-    getchar();*/
-
     sleep(2); /*Per mostrare la printf non sovrapposta */
-    printf(ANSI_COLOR_GREEN "---------------------Inizio Gioco---------------------\n" ANSI_COLOR_RESET);
 
+    printf(ANSI_COLOR_GREEN "\n---------------------Inizio Gioco---------------------\n" ANSI_COLOR_RESET);
     /* Semaforo wait for zero */
-    printf("\nMaster PID:%d : Rilascio il semaforo per i taxi...\n", getpid());
-    /*set_sem(id_sem_taxi, 0, 0);*/
+    printf("Master PID:%d : Rilascio il semaforo per i taxi...\n", getpid());
     dec_sem(id_sem_taxi, 0);
     wait_sem_zero(id_sem_taxi, 0);
     TEST_ERROR
@@ -331,7 +303,7 @@ int main(int argc, char const *argv[])
     printf("Master PID:%d : Timer gioco partito - %d sec.\n", getpid(), SO_DURATION);
     alarm(SO_DURATION);
 
-    /*Processo per stampa ogni secondo*/
+    /* Processo per stampa ogni secondo */
     switch (pid_print = fork())
     {
     case -1:
@@ -348,22 +320,17 @@ int main(int argc, char const *argv[])
             print_status(city, id_sem_cap);
             sleep(1);
         }
+
         if (errno == EINTR)
             errno = 0;
-
-        TEST_ERROR
-        break;
-    default:
         TEST_ERROR
         break;
     }
 
-    TEST_ERROR
-
-    /*Aspetto che finisce SO_DURATION*/
-    while ((waitpid(-1, &status, 0))&& stop_create == 0)
+    /* Aspetto che finisce SO_DURATION */
+    while ((waitpid(-1, &status, 0)) && stop_create == 0)
     {
-        if(WIFEXITED(status))
+        if (WIFEXITED(status))
         {
             rel_sem(id_sem_taxi, 0);
             switch (fork_value = fork())
@@ -375,9 +342,8 @@ int main(int argc, char const *argv[])
             case 0:
                 create_taxi_child();
                 break;
-            
+
             default:
-                TEST_ERROR
                 taxi_pid = insert_pid(taxi_pid, fork_value);
                 break;
             }
@@ -385,9 +351,7 @@ int main(int argc, char const *argv[])
     }
 
     if (stop_create == 1)
-    {
         kill(pid_print, SIGTERM);
-    }
 
     printf("Master : Timer scaduto.. Il gioco termina.\n");
     close_master();
@@ -438,11 +402,7 @@ void close_master()
 
     /* Stampa carattersitiche finali  */
 
-    /*printf("Matrice con le richieste :\n");*/
-    /*print_resource(id_sem_request);*/
-
     printf("SO_TOP_CELLS %d celle più attraversate :\n", SO_TOP_CELLS);
-
     print_top_cells();
 
     /* Prelievo viaggi inevasi */
@@ -461,7 +421,6 @@ void close_master()
            stats->pid_max_viaggio, stats->max_viaggio,
            stats->pid_max_richieste, stats->max_richieste);
 
-    /*Eliminazione IPC */
     printf("Master PID:%d : Elimino tutti gli IPC\n", getpid());
 
     /* Detaching ed eliminazione memoria condivisa */
@@ -530,7 +489,7 @@ int create_matrix()
 
         for (i; i <= i_holes + 1 && cond == 1; i++)
         {
-            if (j_holes == 0) /* Colonna j estratta è il bordo laterale sinistro (j=0)*/
+            if (j_holes == 0) /* Colonna j estratta è il bordo laterale sinistro (j=0) */
                 j = j_holes;
             else
                 j = j_holes - 1;
@@ -702,7 +661,7 @@ void print_top_cells()
     int i, j, z = 0;
     lista_pid *nodo_min, *q;
 
-    /*Inserisco i primi SO_TOP_CELLS*/
+    /* Inserisco i primi SO_TOP_CELLS */
 
     for (i = 0; i < SO_TOP_CELLS; i++)
     {
@@ -716,10 +675,10 @@ void print_top_cells()
             nodo_min = min_node(top_cells);
             if (nodo_min->attraversate < city->matrix[i][j].crossing_cont)
             {
-                /*Elimino il nodo minimo e inserisco quello appena letto dalla matrice*/
+                /* Elimino il nodo minimo e inserisco quello appena letto dalla matrice */
                 top_cells = delete_attraversate(top_cells, nodo_min->attraversate);
                 top_cells = insert_attraversate(top_cells, city->matrix[i][j].crossing_cont);
-                /*Salvo anche le coordinate del nuovo nodo di top_cells*/
+                /* Salvo anche le coordinate del nuovo nodo di top_cells */
                 top_cells->posizione.x = i;
                 top_cells->posizione.y = j;
             }
@@ -738,33 +697,22 @@ void print_top_cells()
     {
         for (j = 0; j < SO_WIDTH; j++)
         {
-
             if (city->matrix[i][j].request_pid != 0)
             {
                 if (city->matrix[i][j].is_top)
-                {
                     printf(ANSI_COLOR_YELLOW "%2d " ANSI_COLOR_RESET, city->matrix[i][j].crossing_cont);
-                }
-
                 else
-                {
                     printf(ANSI_COLOR_BLUE "%2d " ANSI_COLOR_RESET, city->matrix[i][j].crossing_cont);
-                }
             }
             else
             {
                 if (city->matrix[i][j].is_top)
-                {
-                    printf(ANSI_COLOR_BLUE " . " ANSI_COLOR_RESET);
-                }
+                    printf(ANSI_COLOR_YELLOW "%2d " ANSI_COLOR_RESET, city->matrix[i][j].crossing_cont);
                 else
-                {
                     printf(" . ");
-                }
             }
         }
         printf("\n");
     }
-
     printf("\n");
 }

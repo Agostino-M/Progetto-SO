@@ -44,17 +44,17 @@
 #define ANSI_COLOR_CYAN "\x1b[36m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
-#define TEST_ERROR                                \
-    if (errno)                                    \
-    {                                             \
-        fprintf(stderr,                           \
-                "%s:%d: PID:%d: Error %d (%s)\n", \
-                __FILE__,                         \
-                __LINE__,                         \
-                getpid(),                         \
-                errno,                            \
-                strerror(errno));                 \
-        exit(EXIT_FAILURE);                       \
+#define TEST_ERROR                                                                \
+    if (errno)                                                                    \
+    {                                                                             \
+        fprintf(stderr,                                                           \
+                ANSI_COLOR_RED "%s:%d: PID:%d: Error %d (%s)\n" ANSI_COLOR_RESET, \
+                __FILE__,                                                         \
+                __LINE__,                                                         \
+                getpid(),                                                         \
+                errno,                                                            \
+                strerror(errno));                                                 \
+        exit(EXIT_FAILURE);                                                       \
     }
 
 typedef struct

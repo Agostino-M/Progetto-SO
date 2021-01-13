@@ -9,9 +9,8 @@ void print_resource(int id_sem)
     {
         printf("%2d ", semctl(id_sem, i, GETVAL));
         if (j % SO_WIDTH == 0)
-        {
             printf("\n  ");
-        }
+
         j++;
     }
     printf("\n");
@@ -25,28 +24,6 @@ void print_matrix(struct shared_map *mat, int field)
     {
         fprintf(stderr, "Stampa: errore nel parametro field\n");
         return;
-    }
-
-    switch (field)
-    {
-    case 1:
-        printf("Stampa: crossing_time\n\n");
-        break;
-
-    case 2:
-        printf("Stampa: crossing_cont\n\n");
-        break;
-
-    case 3:
-        printf("Stampa: is_hole\n\n");
-        break;
-
-    case 4:
-        printf("Stampa: nmax_taxi\n\n");
-        break;
-    case 5:
-        printf("Stampa: is_request\n\n");
-        break;
     }
 
     for (i = 0; i < SO_HEIGHT; i++)

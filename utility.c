@@ -73,7 +73,7 @@ void print_matrix(struct shared_map *mat, int field)
                 break;
 
             case 5:
-                printf("%2d ", mat->matrix[i][j].request_pid);
+                printf(" %5d ", mat->matrix[i][j].request_pid);
                 break;
             }
         }

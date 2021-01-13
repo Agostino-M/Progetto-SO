@@ -60,11 +60,11 @@ int main(int argc, char const *argv[])
     fscanf(fp, "%*s = %d", &SO_SOURCES);
     printf("SO_SOURCES: %d\n", SO_SOURCES);
 
-    fscanf(fp, "%*s = %d", &SO_CAP_MAX);
-    printf("SO_CAP_MAX: %d\n", SO_CAP_MAX);
-
     fscanf(fp, "%*s = %d", &SO_CAP_MIN);
     printf("SO_CAP_MIN: %d\n", SO_CAP_MIN);
+
+    fscanf(fp, "%*s = %d", &SO_CAP_MAX);
+    printf("SO_CAP_MAX: %d\n", SO_CAP_MAX);
 
     fscanf(fp, "%*s = %d", &SO_TAXI);
     printf("SO_TAXI: %d\n", SO_TAXI);

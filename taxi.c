@@ -175,7 +175,7 @@ int main(int argc, char const *argv[])
 
             if (!found)
             {
-                /*sleep(3); attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
+                sleep(3); /*attendo qualche secondino prima di controllare nuovamente la mappa delle richieste */
                 continue;
             }
 

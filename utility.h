@@ -17,7 +17,7 @@
 #include <time.h>
 #include <math.h>
 #define FILEPATH "./Taxi"
-#define DENSE
+
 #ifdef DENSE
 #define SO_WIDTH 20
 #define SO_HEIGHT 10
@@ -27,8 +27,8 @@
 #define SO_HEIGHT 20
 #define INPUT_FILENAME "./large.txt"
 #else
-#define SO_WIDTH 5
-#define SO_HEIGHT 5
+#define SO_WIDTH 20
+#define SO_HEIGHT 10
 #define INPUT_FILENAME "./input.txt"
 #endif
 

@@ -361,11 +361,11 @@ int main(int argc, char const *argv[])
     TEST_ERROR
 
     /*Aspetto che finisce SO_DURATION*/
-    while (((wait(&status)) != -1) && stop_create == 0)
+    while ((waitpid(-1, &status, 0))&& stop_create == 0)
     {
-        if (WIFEXITED(status)) /*Figlio terminato normalmente con exit*/
+        if(WIFEXITED(status))
         {
-            /*Creo un nuovo taxi*/
+            rel_sem(id_sem_taxi, 0);
             switch (fork_value = fork())
             {
             case -1:
@@ -375,11 +375,10 @@ int main(int argc, char const *argv[])
             case 0:
                 create_taxi_child();
                 break;
-
+            
             default:
                 TEST_ERROR
                 taxi_pid = insert_pid(taxi_pid, fork_value);
-                TEST_ERROR
                 break;
             }
         }
@@ -388,7 +387,6 @@ int main(int argc, char const *argv[])
     if (stop_create == 1)
     {
         kill(pid_print, SIGTERM);
-        kill_all_child();
     }
 
     printf("Master : Timer scaduto.. Il gioco termina.\n");

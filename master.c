@@ -639,7 +639,7 @@ void source_handler(int signum)
                 dec_sem_nw(id_sem_write, INDEX(random_x_p, random_y_p));
             }
 
-        } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole || semctl(id_sem_request, INDEX(random_x_p, random_y_p), GETVAL) != 0);
+        } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole || semctl(id_sem_request, INDEX(random_x_p, random_y_p), GETVAL));
         TEST_ERROR
 
         city->matrix[random_x_p][random_y_p].request_pid = getpid();
@@ -675,7 +675,7 @@ void source_handler(int signum)
         rel_sem(id_sem_write, INDEX(request.start.x, request.start.y));
         TEST_ERROR
 
-        /*print_resource(id);*/
+        print_resource(id_sem_request);
     }
     }
 }

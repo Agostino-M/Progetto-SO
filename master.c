@@ -143,7 +143,7 @@ int main(int argc, char const *argv[])
     /* Creazione semaforo "wait for zero" taxi */
     id_sem_taxi = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600);
     TEST_ERROR
-    set_sem(id_sem_taxi, 0, SO_TAXI+1);
+    set_sem(id_sem_taxi, 0, SO_TAXI + 1);
     TEST_ERROR
 
     /* Creazione coda di messaggi */
@@ -229,7 +229,7 @@ int main(int argc, char const *argv[])
                         dec_sem_nw(id_sem_write, INDEX(random_x_p, random_y_p));
                     }
 
-                } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole);
+                } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole || semctl(id_sem_request, INDEX(random_x_p, random_y_p), GETVAL) != 0);
                 TEST_ERROR
 
                 city->matrix[random_x_p][random_y_p].request_pid = getpid();
@@ -267,7 +267,8 @@ int main(int argc, char const *argv[])
                         errno = 0;
                     TEST_ERROR
                     wait_sem_zero(id_sem_request, INDEX(request.start.x, request.start.y));
-                } while (errno == EINTR);
+                } while (errno == EINTR); 
+
 
                 /*Fine sezione critica*/
                 rel_sem(id_sem_write, INDEX(request.start.x, request.start.y));
@@ -283,7 +284,7 @@ int main(int argc, char const *argv[])
         }
     }
 
-    sleep(5); /*sleep per visualizzare l'array delle richieste completo*/
+    sleep(6); /*sleep per visualizzare l'array delle richieste completo*/
     printf("\nArray delle richieste\n\n");
     /*print_resource(id_sem_request);*/
     print_matrix(city, 5);
@@ -359,7 +360,7 @@ int main(int argc, char const *argv[])
 
     TEST_ERROR
 
-    /*Aspetto che tutti i figli terminano o che finisce SO_DURATION*/
+    /*Aspetto che finisce SO_DURATION*/
     while (((wait(&status)) != -1) && stop_create == 0)
     {
         if (WIFEXITED(status)) /*Figlio terminato normalmente con exit*/
@@ -389,18 +390,7 @@ int main(int argc, char const *argv[])
         kill(pid_print, SIGTERM);
         kill_all_child();
     }
-    /* Stampa ogni secondo 
-    while (flag_timer == 0)
-    {
-        printf("Mappa della città:\n");
-        print_status(city, id_sem_cap);
-        sleep(1);
-        if (errno == EINTR) /*La sleep viene interrotta da SIGUSR
-            errno = 0;
 
-        TEST_ERROR
-    }
-    */
     printf("Master : Timer scaduto.. Il gioco termina.\n");
     close_master();
 }
@@ -630,7 +620,6 @@ void source_handler(int signum)
     switch (signum)
     {
     case SIGTERM:
-        /*printf("Source PID:%d SIGTERM rievuto...\n", getpid());*/
         exit(EXIT_SUCCESS);
 
     case SIGUSR2:
@@ -641,6 +630,9 @@ void source_handler(int signum)
 
         do
         {
+            if (errno == EAGAIN)
+                errno = 0;
+            TEST_ERROR
             random_x_p = rand() % SO_HEIGHT;
             random_y_p = rand() % SO_WIDTH;
 
@@ -649,7 +641,7 @@ void source_handler(int signum)
                 dec_sem_nw(id_sem_write, INDEX(random_x_p, random_y_p));
             }
 
-        } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole);
+        } while (errno == EAGAIN || city->matrix[random_x_p][random_y_p].is_hole || semctl(id_sem_request, INDEX(random_x_p, random_y_p), GETVAL) != 0);
         TEST_ERROR
 
         city->matrix[random_x_p][random_y_p].request_pid = getpid();
@@ -685,7 +677,7 @@ void source_handler(int signum)
         rel_sem(id_sem_write, INDEX(request.start.x, request.start.y));
         TEST_ERROR
 
-        print_resource(id_sem_request);
+        /*print_resource(id);*/
     }
     }
 }

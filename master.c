@@ -1,6 +1,6 @@
 #include "sem_lib.h"
 #include "utility.h"
-#include "sem_list.h"
+#include "list_lib.h"
 
 /* Prototipi di funzioni */
 int create_matrix();
@@ -209,7 +209,7 @@ int main(int argc, char const *argv[])
                     random_x_p = rand() % SO_HEIGHT;
                     random_y_p = rand() % SO_WIDTH;
 
-                    if (!city->matrix[random_x_p][random_y_p].is_hole)
+                    if (!city->matrix[random_x_p][random_y_p].is_hole && semctl(id_sem_request, INDEX(random_x_p, random_y_p), GETVAL) == 0)
                     {
                         /* Semaforo di mutua esclusione per la scrittura su coda */
                         dec_sem_nw(id_sem_write, INDEX(random_x_p, random_y_p));
@@ -262,9 +262,7 @@ int main(int argc, char const *argv[])
         }
     }
 
-    sleep(3); /* sleep per visualizzare l'array delle richieste completo */
-    printf("\nArray delle richieste\n\n");
-    print_matrix(city, 5);
+    sleep(2);
     printf("Premi INVIO per continuare.\n");
     getchar();
 
@@ -402,7 +400,7 @@ void close_master()
 
     /* Stampa carattersitiche finali  */
 
-    printf("SO_TOP_CELLS %d celle più attraversate :\n", SO_TOP_CELLS);
+    printf("\nSO_TOP_CELLS %d celle più attraversate :\n", SO_TOP_CELLS);
     print_top_cells();
 
     /* Prelievo viaggi inevasi */
@@ -593,7 +591,7 @@ void source_handler(int signum)
             random_x_p = rand() % SO_HEIGHT;
             random_y_p = rand() % SO_WIDTH;
 
-            if (!city->matrix[random_x_p][random_y_p].is_hole)
+            if (!city->matrix[random_x_p][random_y_p].is_hole && semctl(id_sem_request, INDEX(random_x_p, random_y_p), GETVAL))
             {
                 dec_sem_nw(id_sem_write, INDEX(random_x_p, random_y_p));
             }
@@ -693,7 +691,7 @@ void print_top_cells()
 
     printf("\n");
 
-    for (i = 0; i < SO_HEIGHT; i++)
+    /*for (i = 0; i < SO_HEIGHT; i++)
     {
         for (j = 0; j < SO_WIDTH; j++)
         {
@@ -710,6 +708,40 @@ void print_top_cells()
                     printf(ANSI_COLOR_YELLOW "%2d " ANSI_COLOR_RESET, city->matrix[i][j].crossing_cont);
                 else
                     printf(" . ");
+            }
+        }
+        printf("\n");
+    }*/
+
+    for (i = 0; i < SO_HEIGHT; i++)
+    {
+        for (j = 0; j < SO_WIDTH; j++)
+        {
+            if (city->matrix[i][j].is_top)
+            {
+                printf("%2d ", city->matrix[i][j].crossing_cont);
+            }
+            else
+            {
+                printf(" . ");
+            }
+        }
+        printf("\n");
+    }
+
+    printf("\n\n");
+
+    for (i = 0; i < SO_HEIGHT; i++)
+    {
+        for (j = 0; j < SO_WIDTH; j++)
+        {
+            if (city->matrix[i][j].request_pid != 0)
+            {
+                printf(" S ");
+            }
+            else
+            {
+                printf(" . ");
             }
         }
         printf("\n");

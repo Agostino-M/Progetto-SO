@@ -1,4 +1,4 @@
-#include "sem_list.h"
+#include "list_lib.h"
 
 lista_pid *insert_pid(lista_pid *p, pid_t new_pid)
 {

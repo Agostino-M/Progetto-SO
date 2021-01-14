@@ -52,12 +52,3 @@ void wait_sem_zero(int sem_id, int index)
     sops.sem_flg = 0;
     semop(sem_id, &sops, 1);
 }
-
-void reset_sem_set(int sem_id, int dim)
-{
-    int i = 0;
-    for (i = 0; i < dim; i++)
-    {
-        semctl(sem_id, i, SETVAL, 1);
-    }
-}

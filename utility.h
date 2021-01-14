@@ -125,7 +125,15 @@ void print_resource(int id_sem);
 */
 void print_matrix(struct shared_map *mat, int field);
 
+
+/*
+ * Stampa l'array di semafori id_sem_cap come matrice, relativo alla struttura shared_map
+ * INPUT:
+ *  - mat: puntatore alla struttura shared_map
+ *  - id_sem_cap : indice dell'array di semafori
+*/
 void print_status(struct shared_map *mat, int id_sem_cap);
+
 
 int min_vet(struct top_cells *vet, int dim);
 

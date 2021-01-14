@@ -54,15 +54,15 @@ int dec_sem_nw(int sem_id, int index);
 
 
 /*
- * Tenta di accedere alla risorsa, aspettando 
+ * Tenta di accedere alla risorsa, aspettando il tempo time secondi
  * INPUT:
  * - sem_id: ID del semaforo
  * - index: posizione del semaforo nell'array
- * - flag
+ * - time: 
  * RISULTATO
  * - Se la risorsa è disponibile il semaforo è decrementato di 1
  * - Se la risorsa non è disponibile (valore semaforo = 0), il
- *   processo termina con errno = EAGAIN.
+ *   processo termina con errno = EAGAIN dopo aver aspettato time secondi.
  */
 void dec_sem_wait(int sem_id, int index, int time);
 

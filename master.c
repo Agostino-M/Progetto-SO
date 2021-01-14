@@ -691,28 +691,6 @@ void print_top_cells()
 
     printf("\n");
 
-    /*for (i = 0; i < SO_HEIGHT; i++)
-    {
-        for (j = 0; j < SO_WIDTH; j++)
-        {
-            if (city->matrix[i][j].request_pid != 0)
-            {
-                if (city->matrix[i][j].is_top)
-                    printf(ANSI_COLOR_YELLOW "%2d " ANSI_COLOR_RESET, city->matrix[i][j].crossing_cont);
-                else
-                    printf(ANSI_COLOR_BLUE "%2d " ANSI_COLOR_RESET, city->matrix[i][j].crossing_cont);
-            }
-            else
-            {
-                if (city->matrix[i][j].is_top)
-                    printf(ANSI_COLOR_YELLOW "%2d " ANSI_COLOR_RESET, city->matrix[i][j].crossing_cont);
-                else
-                    printf(" . ");
-            }
-        }
-        printf("\n");
-    }*/
-
     for (i = 0; i < SO_HEIGHT; i++)
     {
         for (j = 0; j < SO_WIDTH; j++)

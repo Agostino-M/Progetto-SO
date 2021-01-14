@@ -1,6 +1,10 @@
-# Flag per la compilazione nello standard c89 / -W disabilita warning su pedantic
-CFLAGS = -std=c89 -pedantic
-CFLAGS1 = 
+# common è di default, provare con "make BUILD=dense" o "make BUILD=large"
+BUILD := common
+
+cflags.common := -std=c89 -pedantic
+cflags.dense := -DDENSE
+cflags.large := -DLARGE
+CFLAGS := ${cflags.${BUILD}} ${cflags.common}
 
 # Nome dell'eseguibile
 TARGET = Master
@@ -14,18 +18,12 @@ HEADLER = sem_lib.h utility.h
 
 # Regola che permette di creare i file oggetto unico e di produrre l'eseguibile
 $(TARGET): $(OBJ) $(OBJ1)
-	gcc $(OBJ1) $(CFLAGS1) $(CFLAGS) -o $(TARGET1) -lm
-	gcc $(OBJ) $(CFLAGS1) $(CFLAGS) -o $(TARGET)
+	gcc  $(OBJ1) $(CFLAGS) -o $(TARGET1) -lm
+	gcc $(OBJ) $(CFLAGS) -o $(TARGET)
 
 # Per produrre i file oggetto a bisogno di ingrediente headler
 $(OBJ): $(HEADLER)
 $(OBJ1): $(HEADLER)
-
-# compila con -D DENSE
-dense: 
-
-# compila con -D LARGE
-large: 
 
 clean:
 	rm -f *.o $(TARGET) *~

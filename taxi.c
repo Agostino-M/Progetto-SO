@@ -21,6 +21,7 @@ int SO_TIMEOUT;
 struct shared_map *city;
 struct shared_stats *stats;
 struct timespec crossing_time;
+struct timespec wait_a_moment;
 coordinate actual_position;
 
 int doing_request = 0; /* Indica se il taxi sta eseguendo una richiesta */
@@ -33,6 +34,7 @@ int main(int argc, char const *argv[])
     coordinate source_position;
     int iter, i, j, a, b, found;
     FILE *fp;
+    wait_a_moment.tv_nsec = 100000000;
 
     if ((fp = fopen(INPUT_FILENAME, "r")) == NULL)
     {
@@ -101,7 +103,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    /* Semaforo wait for zero */
+    /*Taxi attende che tutti gli altri siano creati e inizializzati*/
     dec_sem(id_sem_taxi, 0);
     TEST_ERROR
     wait_sem_zero(id_sem_taxi, 0);
@@ -163,7 +165,8 @@ int main(int argc, char const *argv[])
 
             if (!found)
             {
-                sleep(1); /* Attendo prima di controllare la mappa delle richieste */
+                /* Attendo qualche nanosecondo prima di ricontrollare la mappa delle richieste */
+                nanosleep(&wait_a_moment, NULL);
                 continue;
             }
 

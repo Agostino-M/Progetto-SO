@@ -19,7 +19,7 @@ long SO_TIMENSEC_MIN, SO_TIMENSEC_MAX;
 /* Contatori */
 int cont_taxi = 0, cont_sources = 0;
 /* Flag per handler */
-int flag_timer = 0, stop_create = 0;
+int stop_create = 0;
 /* ID IPC */
 int id_sem_cap, id_sem_taxi, id_sem_stats, id_sem_request, id_shd_mem, id_shd_stats, id_msg_queue, id_sem_write;
 /* Strutture condivise */
@@ -554,7 +554,6 @@ void signal_handler(int signum)
         break;
 
     case SIGALRM:
-        flag_timer = 1;
         stop_create = 1;
         break;
     }

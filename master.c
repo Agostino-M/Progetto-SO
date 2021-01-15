@@ -291,9 +291,8 @@ int main(int argc, char const *argv[])
     sleep(2); /*Per mostrare la printf non sovrapposta */
 
     printf(ANSI_COLOR_GREEN "\n---------------------Inizio Gioco---------------------\n" ANSI_COLOR_RESET);
-    /* Semaforo wait for zero */
-    printf("Master PID:%d : Rilascio il semaforo per i taxi...\n", getpid());
     dec_sem(id_sem_taxi, 0);
+    /* Semaforo wait for zero */
     wait_sem_zero(id_sem_taxi, 0);
     TEST_ERROR
 

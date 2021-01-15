@@ -50,14 +50,6 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    /* Array di semafori di mutua esclusione per incremento contatori in mem condivisa
-     * sem[0] : Eseguiti con successo
-     * sem[1] : Abortiti
-     * sem[2] : Taxi che ha fatto più strada
-     * sem[3] : Taxi che ha fatto il viaggio più lungo
-     * sem[4] : Taxi che ha raccolto più richieste
-     */
-
     /* Controllo dei parametri ricevuti */
     if (argc != 8)
     {

@@ -34,7 +34,7 @@ int main(int argc, char const *argv[])
     coordinate source_position;
     int iter, i, j, a, b, found;
     FILE *fp;
-    wait_a_moment.tv_nsec = 300000000;
+    wait_a_moment.tv_nsec = 500000000;
 
     if ((fp = fopen(INPUT_FILENAME, "r")) == NULL)
     {
